@@ -5,8 +5,15 @@
 	-) libxml2
 	-) eigen3
 
+## Need to create the following directories
+	-) files_not_mined/
+	-) raw_matrices/
+	-) u_matrices/
+	-) v_matrices/
+	-) word_vectors/
 
-## NOTE: still a work in progress #
+## NOTE: still a work in progress
+
 
 ## Goals:
 	-) Links to download the coordinate representation of the sparce matricies for each person (if you dont want to download the emails)
