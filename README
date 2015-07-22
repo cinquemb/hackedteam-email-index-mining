@@ -9,5 +9,6 @@
 ## NOTE: still a work in progress #
 
 ## Goals:
+	-) Links to download the coordinate representation of the sparce matricies for each person (if you dont want to download the emails)
 	-) SVD of emails for each person
 	-) simple binary that takes input arguement of search terms and outputs documets that are most related by some distance measurment (cos(theta) probably)

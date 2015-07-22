@@ -389,12 +389,12 @@ void construct_sparce_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string
 }
 
 void start_mine_people(std::string& person){
-	std::string out_matrix_file = "HT_"+person+"_mail_words_matrix_raw.txt";
-	std::string out_matrix_file_u = "HT_"+person+"_mail_words_matrix_u.txt";
-	std::string out_matrix_file_sigma = "HT_"+person+"_mail_words_matrix_sigma.txt";
-	std::string out_matrix_file_v = "HT_"+person+"_mail_words_matrix_v.txt";
+	std::string out_matrix_file = "raw_matrices/HT_"+person+"_mail_words_matrix_raw.txt";
+	std::string out_matrix_file_u = "u_matrices/HT_"+person+"_mail_words_matrix_u.txt";
+	std::string out_matrix_file_sigma = "sigma_matrices/HT_"+person+"_mail_words_matrix_sigma.txt";
+	std::string out_matrix_file_v = "v_matrices/HT_"+person+"_mail_words_matrix_v.txt";
 	
-	std::string files_not_mined_file = "files_not_mined_"+person+".md";
+	std::string files_not_mined_file = "files_not_mined/files_not_mined_"+person+".md";
 	std::ifstream ht_file_check(out_matrix_file);
 	if (ht_file_check.good()){
 		std::cout << "IJV exists for: " << person << std::endl;
