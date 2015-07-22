@@ -414,11 +414,11 @@ Eigen::SparseMatrix<float> load_sparce_matrix(std::string& data_file_name){
     while (std::getline(in,line)){
         if(line.size() > 1){
         	if(line_count == 0){
-              std::vector<std::string> datas = split(line, ',');
-              files_count = std::atoi(datas[0].c_str());
-              words_count = std::atoi(datas[1].c_str());
-              int estimation_of_entries = files_count * (int)(words_count/100);
-              tripletList.reserve(estimation_of_entries);
+        		std::vector<std::string> datas = split(line, ',');
+        		files_count = std::atoi(datas[0].c_str());
+        		words_count = std::atoi(datas[1].c_str());
+        		int estimation_of_entries = files_count * (int)(words_count/100);
+        		tripletList.reserve(estimation_of_entries);
             }else{
                 std::vector<std::string> datas = split(line, ',');
                 int i = std::atoi(datas[0].c_str());
@@ -440,7 +440,6 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 		std::cout << "before Computing svd matricies" << std::endl;
 		Eigen::JacobiSVD<Eigen::MatrixXf> lsa_matrix_svd(lsa_matrix, Eigen::ComputeFullU | Eigen::ComputeFullV);
 		std::cout << "after Computing svd matricies" << std::endl;
-		
   
 		/*
 			ref: ttps://en.wikipedia.org/wiki/Latent_semantic_analysis
@@ -483,7 +482,7 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 		construct_sparce_matrix_file_ijv(m_s_s_sparce, out_matrix_file_sigma);
 		construct_sparce_matrix_file_ijv(m_s_v_sparce, out_matrix_file_v);
 	}catch (std::bad_alloc& ba){
-		not_enough_memory_for_svd.push_back(person);
+		std::cout << "Not enough memory for svd on: " << person << std::endl;
 	}
 }
 
@@ -499,10 +498,12 @@ void start_mine_people(std::string& person){
 		//TODO parse raw matrix here and skip to svd operations
 		ht_file_check.close();
 
+		std::cout << "IJV raw exists for: " << person << " \nTrying singular value decmposition for: " << person << std::endl;
+
 		Eigen::SparseMatrix<float> lsa_matrix = load_sparce_matrix(out_matrix_file);
 		construct_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v, person);
 
-		std::cout << "IJV raw exists for: " << person << std::endl;
+		
 		return;
 	}else{
 		std::cout << "Mining emails for " << person << std::endl;
@@ -539,16 +540,7 @@ void start_mine_people(std::string& person){
 		file_index_not_used.clear();
 
 		//save ijv formate of matrix
-		construct_sparce_matrix_file_ijv(lsa_matrix, out_matrix_file);
-		
-
-		return;
-
-		//maybe use the SVD to reduce the wordspace across the files?
-
-		
-		
-		
+		construct_sparce_matrix_file_ijv(lsa_matrix, out_matrix_file);	
 	}
 }
 		
