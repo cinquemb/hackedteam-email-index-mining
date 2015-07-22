@@ -397,12 +397,13 @@ void start_mine_people(std::string& person){
 	std::string files_not_mined_file = "files_not_mined_"+person+".md";
 	std::ifstream ht_file_check(out_matrix_file);
 	if (ht_file_check.good()){
-		std::cout << "SVD exists for: " << person << std::endl;
+		std::cout << "IJV exists for: " << person << std::endl;
 		return;
 	}else{
 		std::cout << "Mining emails for " << person << std::endl;
 		std::string mail_files_list = home_dir + "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/mail_files_list_"+ person+ ".md";
-		std::string top_dir_path = home_dir + "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/";
+		std::string top_dir_path = "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/";
+		std::string top_dir_path_home = home_dir +"/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/";
 		std::vector<std::string> mail_files = get_files_to_mine(mail_files_list, top_dir_path);
 		if(mail_files.size() == 0){
 			std::cout << "No email paths in " << mail_files_list << std::endl;
@@ -413,7 +414,7 @@ void start_mine_people(std::string& person){
 		std::string stop_words_file_list = home_dir + "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stop_words_file_list.txt";
 		stop_words_map = load_stop_words(stop_words_file_list);
 		std::cout << "Total stop words: " << stop_words_map.size() << std::endl;
-		parse_mine_files(mail_files, top_dir_path);
+		parse_mine_files(mail_files, top_dir_path_home);
 		std::cout << "Total words: " << word_count_file_map.size() << std::endl;
 		int avg_words_per_file = std::ceil(total_words_per_email/(float)total_mined_emails);
 		std::cout << "Average words per file: " << avg_words_per_file << std::endl;
