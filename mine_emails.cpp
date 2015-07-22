@@ -29,6 +29,7 @@ int total_mined_emails;
 long long int total_words_per_email = 0;
 std::vector<std::string> files_not_mined;
 std::vector<int> file_index_not_used;
+std::vector<std::string> not_enough_memory_for_svd;
 
 template <class T1, class T2, class Pred = std::less<T2> >
 struct sort_pair_second {
@@ -397,7 +398,8 @@ void start_mine_people(std::string& person){
 	std::string files_not_mined_file = "files_not_mined/files_not_mined_"+person+".md";
 	std::ifstream ht_file_check(out_matrix_file);
 	if (ht_file_check.good()){
-		std::cout << "IJV exists for: " << person << std::endl;
+		//TODO parse raw matrix here and skip to svd operations
+		std::cout << "IJV raw exists for: " << person << std::endl;
 		return;
 	}else{
 		std::cout << "Mining emails for " << person << std::endl;
@@ -424,8 +426,11 @@ void start_mine_people(std::string& person){
 		//normalize the rows
 		row_normalize_matrix(lsa_matrix);
 
-		//clear map to free memory
+		//clear variables to free memory/rested counts
 		word_count_file_map.clear();
+		total_words_per_email = 0;
+		files_not_mined.clear();
+		file_index_not_used.clear();
 
 		//save ijv formate of matrix
 		construct_sparce_matrix_file_ijv(lsa_matrix, out_matrix_file);
@@ -434,59 +439,57 @@ void start_mine_people(std::string& person){
 		return;
 
 		//maybe use the SVD to reduce the wordspace across the files?
-		std::cout << "before Computing svd matricies" << std::endl;
-		Eigen::JacobiSVD<Eigen::MatrixXf> lsa_matrix_svd(lsa_matrix, Eigen::ComputeFullU | Eigen::ComputeFullV);
-		std::cout << "after Computing svd matricies" << std::endl;
-		Eigen::VectorXf lsa_matrix_singular_values = lsa_matrix_svd.singularValues();
-  
-		/*
-			ref: ttps://en.wikipedia.org/wiki/Latent_semantic_analysis
-			See how related documents j and q are in the low-dimensional space by comparing the vectors \Sigma_k \hat{\textbf{d}}_j and \Sigma_k \hat{\textbf{d}}_q (typically by cosine similarity).
 
-			Given a query, view this as a mini document, and compare it to your documents in the low-dimensional space.
+		try{
+			std::cout << "before Computing svd matricies" << std::endl;
+			Eigen::JacobiSVD<Eigen::MatrixXf> lsa_matrix_svd(lsa_matrix, Eigen::ComputeFullU | Eigen::ComputeFullV);
+			std::cout << "after Computing svd matricies" << std::endl;
+			
+	  
+			/*
+				ref: ttps://en.wikipedia.org/wiki/Latent_semantic_analysis
+				See how related documents j and q are in the low-dimensional space by comparing the vectors \Sigma_k \hat{\textbf{d}}_j and \Sigma_k \hat{\textbf{d}}_q (typically by cosine similarity).
 
-			To do the latter, you must first translate your query into the low-dimensional space. It is then intuitive that you must use the same transformation that you use on your documents:
+				Given a query, view this as a mini document, and compare it to your documents in the low-dimensional space.
 
-			d_hat = inverse(sigma) * transpose(U) *  d (column vector with words in order of how they appear in original matrix)
+				To do the latter, you must first translate your query into the low-dimensional space. It is then intuitive that you must use the same transformation that you use on your documents:
 
-			then find then transpose d_hat and find the eucldeian distance between other documents in lower dimensional space
-		*/
+				d_hat = inverse(sigma) * transpose(U) *  d (column vector with words in order of how they appear in original matrix)
 
-		/* look up how to create sparce matricies from matrix/ vectors */
-		std::cout << "before storing U matrix" << std::endl;
-		Eigen::SparseMatrix<float> m_s_u_sparce;
-		{
-			Eigen::MatrixXf m_s_u = lsa_matrix_svd.matrixU();
-			m_s_u_sparce = m_s_u.sparseView();
+				then find then transpose d_hat and find the eucldeian distance between other documents in lower dimensional space
+			*/
+
+			std::cout << "before storing U matrix" << std::endl;
+			Eigen::SparseMatrix<float> m_s_u_sparce;
+			{
+				Eigen::MatrixXf m_s_u = lsa_matrix_svd.matrixU();
+				m_s_u_sparce = m_s_u.sparseView();
+			}
+			
+			std::cout << "before storing Sigma matrix" << std::endl;
+			Eigen::VectorXf lsa_matrix_singular_values = lsa_matrix_svd.singularValues();
+			int dims = lsa_matrix_singular_values.size();
+			Eigen::SparseMatrix<float> m_s_s_sparce(dims,dims);
+			for(int i=0; i<dims;++i)
+				m_s_s_sparce.coeffRef(i,i) += lsa_matrix_singular_values[i];
+
+					
+			std::cout << "before V* Sigma matrix" << std::endl;
+			Eigen::SparseMatrix<float> m_s_v_sparce;
+			{
+				Eigen::MatrixXf m_s_v = lsa_matrix_svd.matrixV();
+				m_s_v_sparce = m_s_v.sparseView();
+			}
+			
+			//serialize u/sigma/v matricies to txt file
+			std::cout << "Saving svd matricies" << std::endl;
+			construct_sparce_matrix_file_ijv(m_s_u_sparce, out_matrix_file_u);
+			construct_sparce_matrix_file_ijv(m_s_s_sparce, out_matrix_file_sigma);
+			construct_sparce_matrix_file_ijv(m_s_v_sparce, out_matrix_file_v);
+		}catch (std::bad_alloc& ba){
+			not_enough_memory_for_svd.push_back(person);
 		}
 		
-		std::cout << "before storing Sigma matrix" << std::endl;
-		int dims = lsa_matrix_singular_values.size();
-		Eigen::SparseMatrix<float> m_s_s_sparce(dims,dims);
-		for(int i=0; i<dims;++i)
-			m_s_s_sparce.coeffRef(i,i) += lsa_matrix_singular_values[i];
-
-				
-		std::cout << "before V* Sigma matrix" << std::endl;
-		Eigen::SparseMatrix<float> m_s_v_sparce;
-		{
-			Eigen::MatrixXf m_s_v = lsa_matrix_svd.matrixV();
-			m_s_v_sparce = m_s_v.sparseView();
-		}
-		
-		
-		//files are rows, words are columns
-		//Eigen::SparseMatrix<float> lsa_matrix_transpose(lsa_matrix.transpose());
-
-		
-		//serialize u/sigma/v matricies to txt file
-		std::cout << "Saving svd matricies" << std::endl;
-		//save_matrix(m_s_u, out_matrix_file_u);
-		//save_matrix(m_s_s, out_matrix_file_sigma);
-		//save_matrix(m_s_v, out_matrix_file_v);
-		construct_sparce_matrix_file_ijv(m_s_u_sparce, out_matrix_file_u);
-		construct_sparce_matrix_file_ijv(m_s_s_sparce, out_matrix_file_sigma);
-		construct_sparce_matrix_file_ijv(m_s_v_sparce, out_matrix_file_v);
 		
 	}
 }
