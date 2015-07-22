@@ -1,0 +1,14 @@
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/danish
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/dutch
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/english
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/finnish
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/french
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/german
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/hungarian
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/italian
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/norwegian
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/portuguese
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/russian
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/spanish
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/swedish
+/Users/cinquemb/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stopwords/turkish

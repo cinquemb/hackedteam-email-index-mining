@@ -1,0 +1,13 @@
+# Using LSA and related techniques to efficently search the emails released in the Hacking Team data dump  #
+
+## Dependencies:
+	-) libicu
+	-) libxml2
+	-) eigen3
+
+
+## NOTE: still a work in progress #
+
+## Goals:
+	-) SVD of emails for each person
+	-) simple binary that takes input arguement of search terms and outputs documets that are most related by some distance measurment (cos(theta) probably)
