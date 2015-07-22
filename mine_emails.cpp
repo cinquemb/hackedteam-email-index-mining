@@ -452,12 +452,28 @@ void start_mine_people(std::string& person){
 			then find then transpose d_hat and find the eucldeian distance between other documents in lower dimensional space
 		*/
 
+		/* look up how to create sparce matricies from matrix/ vectors */
 		std::cout << "before storing U matrix" << std::endl;
-		Eigen::MatrixXf m_s_u = lsa_matrix_svd.matrixU();
+		Eigen::SparseMatrix<float> m_s_u_sparce;
+		{
+			Eigen::MatrixXf m_s_u = lsa_matrix_svd.matrixU();
+			m_s_u_sparce = m_s_u.sparseView();
+		}
+		
 		std::cout << "before storing Sigma matrix" << std::endl;
-		Eigen::MatrixXf m_s_s = lsa_matrix_singular_values.asDiagonal();
+		int dims = lsa_matrix_singular_values.size();
+		Eigen::SparseMatrix<float> m_s_s_sparce(dims,dims);
+		for(int i=0; i<dims;++i)
+			m_s_s_sparce.coeffRef(i,i) += lsa_matrix_singular_values[i];
+
+				
 		std::cout << "before V* Sigma matrix" << std::endl;
-		Eigen::MatrixXf m_s_v = lsa_matrix_svd.matrixV();
+		Eigen::SparseMatrix<float> m_s_v_sparce;
+		{
+			Eigen::MatrixXf m_s_v = lsa_matrix_svd.matrixV();
+			m_s_v_sparce = m_s_v.sparseView();
+		}
+		
 		
 		//files are rows, words are columns
 		//Eigen::SparseMatrix<float> lsa_matrix_transpose(lsa_matrix.transpose());
@@ -465,9 +481,12 @@ void start_mine_people(std::string& person){
 		
 		//serialize u/sigma/v matricies to txt file
 		std::cout << "Saving svd matricies" << std::endl;
-		save_matrix(m_s_u, out_matrix_file_u);
-		save_matrix(m_s_s, out_matrix_file_sigma);
-		save_matrix(m_s_v, out_matrix_file_v);
+		//save_matrix(m_s_u, out_matrix_file_u);
+		//save_matrix(m_s_s, out_matrix_file_sigma);
+		//save_matrix(m_s_v, out_matrix_file_v);
+		construct_sparce_matrix_file_ijv(m_s_u_sparce, out_matrix_file_u);
+		construct_sparce_matrix_file_ijv(m_s_s_sparce, out_matrix_file_sigma);
+		construct_sparce_matrix_file_ijv(m_s_v_sparce, out_matrix_file_v);
 		
 	}
 }
