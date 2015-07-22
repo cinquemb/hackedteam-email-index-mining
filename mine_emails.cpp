@@ -8,6 +8,8 @@
 #include <cmath>
 #include <iterator>
 
+#include <sys/stat.h>
+
 #include <libxml/HTMLParser.h>
 #include <libxml/xpath.h>
 #include <libxml/xmlreader.h>
@@ -30,6 +32,9 @@ long long int total_words_per_email = 0;
 std::vector<std::string> files_not_mined;
 std::vector<int> file_index_not_used;
 std::vector<std::string> not_enough_memory_for_svd;
+
+//experimental perameter related to how much memory svd will take and complete in a resonable time.
+int system_threash_hold = 1500000;
 
 template <class T1, class T2, class Pred = std::less<T2> >
 struct sort_pair_second {
@@ -98,6 +103,12 @@ void save_matrix(Eigen::MatrixXf& m, std::string& file_string){
 	o.close();
 }
 
+long get_file_size(std::string filename){
+    struct stat stat_buf;
+    int rc = stat(filename.c_str(), &stat_buf);
+    return rc == 0 ? stat_buf.st_size : -1;
+}
+
 std::string processNode(xmlTextReaderPtr reader) {
     xmlChar *name, *value;
     name = xmlTextReaderName(reader);
@@ -161,7 +172,7 @@ std::vector<std::string> load_people(std::string files_list){
 }
 
 std::vector<std::string> get_files_to_mine(std::string files_list, std::string& top_dir_path){
-	std::cout << "Loading Email Paths" << std::endl; 
+	std::cout << "	Loading Email Paths" << std::endl; 
     std::vector<std::string> data_file_paths;
     std::string line;
     std::ifstream in(files_list.c_str());
@@ -228,7 +239,7 @@ std::vector<std::string> extract_words_from_email(std::string &email){
 	        }
 	        xmlFreeTextReader(reader);
 	        if (ret != 0) {
-	            std::cout << "failed to parse message" << std::endl;
+	            std::cout << "	failed to parse message" << std::endl;
 	        }
 	    }
 	    temp_words = string_split(out_text);
@@ -301,7 +312,7 @@ std::string load_email(std::string &file_string){
 }
 
 void parse_mine_files(std::vector<std::string>& mail_files, std::string& top_dir_path){
-	std::cout << "Parsing Emails and Constructing Matrix" << std::endl;
+	std::cout << "	Parsing Emails and Constructing Matrix" << std::endl;
 	int start_vec_len = mail_files.size();
 
 	for(int i=0; i< start_vec_len;++i){
@@ -325,7 +336,7 @@ void parse_mine_files(std::vector<std::string>& mail_files, std::string& top_dir
 			file_index_not_used.push_back(i);
 		}
 		if( i % 10000 == 0 && i != 0)
-			std::cout << "	Emails Parsed: " << i << std::endl;
+			std::cout << "		Emails Parsed: " << i << std::endl;
 	}
 }
 
@@ -343,7 +354,7 @@ Eigen::SparseMatrix<float> construct_sparce_matrix(std::map<std::string, std::st
 	transform(word_count_file_map.begin(), word_count_file_map.end(), back_inserter(word_vector), RetrieveKey());
 	std::sort(word_vector.begin(), word_vector.end());
 	save_data(word_vector_file, word_vector);
-	std::cout << "Sparce matrix construction" << std::endl;
+	std::cout << "	Sparce matrix construction" << std::endl;
 	for(int i=0;i<number_of_words;++i){
 		std::vector<std::string> tmp_word_counts = string_split(word_count_file_map[word_vector[i]]);
 		std::map<int, int> tmp_word_counts_map;
@@ -367,7 +378,7 @@ Eigen::SparseMatrix<float> construct_sparce_matrix(std::map<std::string, std::st
 		}
 
 		if( i % 2000 == 0 && i != 0)
-			std::cout << "	Word rows constructed: " << i << std::endl;
+			std::cout << "		Word rows constructed: " << i << std::endl;
 		
 	}
 	SparceWordMatrix.makeCompressed();
@@ -375,7 +386,7 @@ Eigen::SparseMatrix<float> construct_sparce_matrix(std::map<std::string, std::st
 }
 
 void row_normalize_matrix(Eigen::SparseMatrix<float>& m){
-	std::cout << "Matrix row normalization" << std::endl;
+	std::cout << "	Matrix row normalization" << std::endl;
 	for (int k=0; k<m.outerSize(); ++k){
 		float normalize_sum_squared = 0;
 		for(Eigen::SparseMatrix<float>::InnerIterator it(m,k); it; ++it)
@@ -389,7 +400,7 @@ void row_normalize_matrix(Eigen::SparseMatrix<float>& m){
 }
 
 void construct_sparce_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string& file_name){
-	std::cout << "Saving sparce matrix to file" << std::endl;
+	//std::cout << "Saving sparce matrix to file" << std::endl;
 	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
 	fprintf(s_h_w_m_f, "%d,%d\n",m.rows(),m.cols());
 	for (int k=0; k<m.outerSize(); ++k){
@@ -437,9 +448,9 @@ Eigen::SparseMatrix<float> load_sparce_matrix(std::string& data_file_name){
 
 void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matrix_file_u, std::string& out_matrix_file_sigma, std::string& out_matrix_file_v, std::string& person){
 	try{
-		std::cout << "before Computing svd matricies" << std::endl;
+		//std::cout << "		before Computing svd matricies" << std::endl;
 		Eigen::JacobiSVD<Eigen::MatrixXf> lsa_matrix_svd(lsa_matrix, Eigen::ComputeFullU | Eigen::ComputeFullV);
-		std::cout << "after Computing svd matricies" << std::endl;
+		//std::cout << "		after Computing svd matricies" << std::endl;
   
 		/*
 			ref: ttps://en.wikipedia.org/wiki/Latent_semantic_analysis
@@ -454,14 +465,14 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 			then find then transpose d_hat and find the eucldeian distance between other documents in lower dimensional space
 		*/
 
-		std::cout << "before storing U matrix" << std::endl;
+		//std::cout << "		before storing U matrix" << std::endl;
 		Eigen::SparseMatrix<float> m_s_u_sparce;
 		{
 			Eigen::MatrixXf m_s_u = lsa_matrix_svd.matrixU();
 			m_s_u_sparce = m_s_u.sparseView();
 		}
 		
-		std::cout << "before storing Sigma matrix" << std::endl;
+		//std::cout << "		before storing Sigma matrix" << std::endl;
 		Eigen::VectorXf lsa_matrix_singular_values = lsa_matrix_svd.singularValues();
 		int dims = lsa_matrix_singular_values.size();
 		Eigen::SparseMatrix<float> m_s_s_sparce(dims,dims);
@@ -469,7 +480,7 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 			m_s_s_sparce.coeffRef(i,i) += lsa_matrix_singular_values[i];
 
 				
-		std::cout << "before V* Sigma matrix" << std::endl;
+		//std::cout << "		before V* Sigma matrix" << std::endl;
 		Eigen::SparseMatrix<float> m_s_v_sparce;
 		{
 			Eigen::MatrixXf m_s_v = lsa_matrix_svd.matrixV();
@@ -477,12 +488,12 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 		}
 		
 		//serialize u/sigma/v matricies to txt file
-		std::cout << "Saving svd matricies" << std::endl;
+		//std::cout << "		Saving svd matricies" << std::endl;
 		construct_sparce_matrix_file_ijv(m_s_u_sparce, out_matrix_file_u);
 		construct_sparce_matrix_file_ijv(m_s_s_sparce, out_matrix_file_sigma);
 		construct_sparce_matrix_file_ijv(m_s_v_sparce, out_matrix_file_v);
 	}catch (std::bad_alloc& ba){
-		std::cout << "Not enough memory for svd on: " << person << std::endl;
+		std::cout << "	Not enough memory for svd on: " << person << std::endl;
 	}
 }
 
@@ -498,12 +509,19 @@ void start_mine_people(std::string& person){
 		//TODO parse raw matrix here and skip to svd operations
 		ht_file_check.close();
 
-		std::cout << "IJV raw exists for: " << person << " \nTrying singular value decmposition for: " << person << std::endl;
-
-		Eigen::SparseMatrix<float> lsa_matrix = load_sparce_matrix(out_matrix_file);
-		construct_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v, person);
-
-		
+		if(get_file_size(out_matrix_file) < system_threash_hold){
+			std::cout << "IJV raw exists for: " << person << " \n 	Trying singular value decmposition for: " << person << std::endl;
+			std::ifstream ht_file_check_sigma(out_matrix_file_sigma);
+			if(ht_file_check_sigma.good()){
+				ht_file_check_sigma.close();
+				std::cout << "		SVD raw exists for: " << person << std::endl;
+			}else{
+				Eigen::SparseMatrix<float> lsa_matrix = load_sparce_matrix(out_matrix_file);
+				construct_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v, person);
+			}
+		}else{
+			std::cout << "IJV raw exists for: " << person << " \n 	To large for system to compute svd for: " << person << std::endl;
+		}
 		return;
 	}else{
 		std::cout << "Mining emails for " << person << std::endl;
@@ -516,14 +534,14 @@ void start_mine_people(std::string& person){
 			return;
 		}
 		total_mined_emails = mail_files.size();
-		std::cout << "Emails to mine: " << total_mined_emails << std::endl;
+		std::cout << "	Emails to mine: " << total_mined_emails << std::endl;
 		std::string stop_words_file_list = home_dir + "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/stop_words_file_list.txt";
 		stop_words_map = load_stop_words(stop_words_file_list);
-		std::cout << "Total stop words: " << stop_words_map.size() << std::endl;
+		std::cout << "	Total stop words: " << stop_words_map.size() << std::endl;
 		parse_mine_files(mail_files, top_dir_path_home);
-		std::cout << "Total words: " << word_count_file_map.size() << std::endl;
+		std::cout << "	Total words: " << word_count_file_map.size() << std::endl;
 		int avg_words_per_file = std::ceil(total_words_per_email/(float)total_mined_emails);
-		std::cout << "Average words per file: " << avg_words_per_file << std::endl;
+		std::cout << "	Average words per file: " << avg_words_per_file << std::endl;
 		//words are rows, files are columns
 		Eigen::SparseMatrix<float> lsa_matrix = construct_sparce_matrix(word_count_file_map, total_mined_emails, avg_words_per_file, person);
 
