@@ -426,6 +426,9 @@ void start_mine_people(std::string& person){
 		//normalize the rows
 		row_normalize_matrix(lsa_matrix);
 
+		//save files not mined
+		save_data(files_not_mined_file, files_not_mined);
+
 		//clear variables to free memory/rested counts
 		word_count_file_map.clear();
 		total_words_per_email = 0;
@@ -434,7 +437,7 @@ void start_mine_people(std::string& person){
 
 		//save ijv formate of matrix
 		construct_sparce_matrix_file_ijv(lsa_matrix, out_matrix_file);
-		save_data(files_not_mined_file, files_not_mined);
+		
 
 		return;
 
