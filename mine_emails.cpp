@@ -328,7 +328,7 @@ Eigen::SparseMatrix<float> construct_sparce_matrix(std::map<std::string, std::st
 	
 	SparceWordMatrix.reserve(Eigen::VectorXi::Constant(total_mined_emails, estimated_avg_words_per_file));
 	std::vector<std::string> word_vector; 
-	std::string word_vector_file = "word_vector_order_"+ person+ ".txt";
+	std::string word_vector_file = "word_vectors/word_vector_order_"+ person+ ".txt";
 	transform(word_count_file_map.begin(), word_count_file_map.end(), back_inserter(word_vector), RetrieveKey());
 	std::sort(word_vector.begin(), word_vector.end());
 	save_data(word_vector_file, word_vector);
@@ -401,7 +401,7 @@ void start_mine_people(std::string& person){
 		return;
 	}else{
 		std::cout << "Mining emails for " << person << std::endl;
-		std::string mail_files_list = home_dir + "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/mail_files_list_"+ person+ ".md";
+		std::string mail_files_list = home_dir + "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/mining_scripts/mail_files_lists/mail_files_list_"+ person+ ".md";
 		std::string top_dir_path = "/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/";
 		std::string top_dir_path_home = home_dir +"/HACKINGTEAMLEAK/HACKINGTEAM_MAIL/";
 		std::vector<std::string> mail_files = get_files_to_mine(mail_files_list, top_dir_path);
