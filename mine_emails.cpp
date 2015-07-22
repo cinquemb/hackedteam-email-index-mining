@@ -136,7 +136,7 @@ std::map<std::string, int> load_stop_words(std::string stop_words_file_list){
 }
 
 std::vector<std::string> load_people(std::string files_list){
-	std::cout << "Loading Email Paths" << std::endl; 
+	std::cout << "Loading people" << std::endl; 
     std::vector<std::string> data_file_paths;
     std::string line;
     std::ifstream in(files_list.c_str());
