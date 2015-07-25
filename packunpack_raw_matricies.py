@@ -57,7 +57,7 @@ def list_files(dir_,is_unpack=False):
                 subdirlist.append(os.path.join(basedir, item))
 
         for subdir in subdirlist:
-            list_files(subdir)
+            list_files(subdir, is_unpack)
     else:
         if not is_unpack:
             if 'tar.gz' not in dir_.split('/')[-1] and '.DS_Store' not in dir_.split('/')[-1]:
