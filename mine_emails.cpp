@@ -23,6 +23,8 @@
 #include <Eigen/LU>
 #include <Eigen/Sparse>
 
+#include <armadillo>
+
 std::string home_dir = std::getenv("HOME");
 
 std::map<std::string, int> stop_words_map;
@@ -410,6 +412,16 @@ void construct_sparce_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string
 	fclose (s_h_w_m_f);
 }
 
+arma::sp_fmat eigen_sparce_to_sparce_matrix_armadillo(Eigen::SparseMatrix<float>& m){
+	arma::sp_fmat n_m(m.rows(), m.cols());
+	for (int k=0; k<m.outerSize(); ++k){
+		for(Eigen::SparseMatrix<float>::InnerIterator it(m,k); it; ++it){
+			n_m(it.row(),it.col()) = it.value();
+		}
+	}
+	return n_m;
+}
+
 Eigen::SparseMatrix<float> load_sparce_matrix(std::string& data_file_name){
     std::string line;
     int line_count = 0;
@@ -443,6 +455,8 @@ Eigen::SparseMatrix<float> load_sparce_matrix(std::string& data_file_name){
     }
     Eigen::SparseMatrix<float> SparceWordMatrix(files_count, words_count);
     SparceWordMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
+    std::cout << "		Sparce Matrix Loaded" << std::endl;
+    SparceWordMatrix.makeCompressed();
     return SparceWordMatrix;
 }
 
@@ -510,7 +524,7 @@ void start_mine_people(std::string& person){
 		ht_file_check.close();
 
 		if(get_file_size(out_matrix_file) < system_threash_hold){
-			std::cout << "IJV raw exists for: " << person << " \n 	Trying singular value decmposition for: " << person << std::endl;
+			std::cout << "IJV raw exists for: " << person << "\n 	Trying singular value decmposition for: " << person << std::endl;
 			std::ifstream ht_file_check_sigma(out_matrix_file_sigma);
 			if(ht_file_check_sigma.good()){
 				ht_file_check_sigma.close();
@@ -520,7 +534,42 @@ void start_mine_people(std::string& person){
 				construct_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v, person);
 			}
 		}else{
-			std::cout << "IJV raw exists for: " << person << " \n 	To large for system to compute svd for: " << person << std::endl;
+			std::cout << "IJV raw exists for: " << person << "\n 	To large for system to compute svd for: " << person  << "\n 	Trying partial svd " << std::endl;
+			Eigen::SparseMatrix<float> lsa_matrix = load_sparce_matrix(out_matrix_file);
+			std::cout << "		1" << std::endl;
+			unsigned long long* lsa_matrix_outer_ptr = (unsigned long long*)lsa_matrix.outerIndexPtr();
+			std::cout << "		2" << std::endl;
+			unsigned long long* lsa_matrix_inner_ptr = (unsigned long long*)lsa_matrix.innerIndexPtr();
+			std::cout << "		3" << std::endl;
+			const arma::ucolvec arma_lsa_matrix_outer_ptr(lsa_matrix_outer_ptr, lsa_matrix.outerSize(), true, true);
+			std::cout << "		4" << std::endl;
+			const arma::ucolvec arma_lsa_matrix_inner_ptr(lsa_matrix_inner_ptr, lsa_matrix.innerSize(), true, true);
+			std::cout << "		5" << std::endl;			
+			const float* lsa_matrix_csc_values = lsa_matrix.valuePtr();
+			std::cout << "		6" << std::endl;
+			const arma::fcolvec arma_lsa_matrix_csc_values(lsa_matrix_csc_values, lsa_matrix.innerSize());
+			std::cout << "		7" << std::endl;
+			/*
+
+				rowind is a dense column vector of type uvec containing the row indices of the values to be inserted
+
+				and colptr is a dense column vector of type uvec (with length n_cols + 1) containing indices of values corresponding to the start of new columns; 
+
+				the vectors correspond to the arrays used by the compressed sparse column format; this form is useful for copying data from other CSC sparse matrix containers 
+
+				sp_mat(rowind, colptr, values, n_rows, n_cols);
+			*/
+
+			arma::sp_fmat X(arma_lsa_matrix_inner_ptr, arma_lsa_matrix_outer_ptr, arma_lsa_matrix_csc_values, lsa_matrix.rows(), lsa_matrix.cols()+1);
+			std::cout << "\n 	Eigen to Arma completed" << std::endl;
+			arma::Mat<float> U;
+			arma::Col<float> s;
+			arma::Mat<float> V;
+
+			bool svds_good = arma::svds(U, s, V, X, 100);
+			if(!svds_good)
+				std::cout << "Partial decomp failed" << std::endl;
+			
 		}
 		return;
 	}else{

@@ -4,6 +4,8 @@
 	-) libicu
 	-) libxml2
 	-) eigen3
+	-) libarmadillo
+	-) libarpack
 
 ## Need to create the following directories
 	-) files_not_mined/
