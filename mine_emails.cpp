@@ -513,7 +513,6 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 }
 
 void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix){
-	std::cout << "		1" << std::endl;
 	int ind_index = 0;
 	unsigned long long* rowind = (unsigned long long*)malloc(sizeof(unsigned long long*) * lsa_matrix.nonZeros());
 	unsigned long long* colptr = (unsigned long long*)malloc(sizeof(unsigned long long*) * lsa_matrix.outerSize());
@@ -524,37 +523,17 @@ void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix){
 			++ind_index;
 		}
 	}
-	std::cout << "		2" << std::endl;
 	const arma::ucolvec arma_lsa_matrix_colptr(colptr, lsa_matrix.outerSize(), false, true);
-	std::cout << "		3" << std::endl;
 	const arma::ucolvec arma_lsa_matrix_rowind(rowind, lsa_matrix.nonZeros(), false, true);
-	std::cout << "		4" << std::endl;			
 	const float* lsa_matrix_csc_values = lsa_matrix.valuePtr();
-	std::cout << "		5" << std::endl;
 	const arma::fcolvec arma_lsa_matrix_csc_values(lsa_matrix_csc_values, lsa_matrix.nonZeros());
-	std::cout << "		6" << std::endl;
-	/*
 
-		rowind is a dense column vector of type uvec containing the row indices of the values to be inserted
-
-		and colptr is a dense column vector of type uvec (with length n_cols + 1) containing indices of values corresponding to the start of new columns; 
-
-		the vectors correspond to the arrays used by the compressed sparse column format; this form is useful for copying data from other CSC sparse matrix containers 
-
-		sp_mat(rowind, colptr, values, n_rows, n_cols);
-
-		good arma_lsa_matrix_csc_values
-
-		arma::sp_fmat X(rowind, colptr, arma_lsa_matrix_csc_values, lsa_matrix.rows(), lsa_matrix.cols()-1);
-	*/
 	arma::sp_fmat X(arma_lsa_matrix_rowind, arma_lsa_matrix_colptr, arma_lsa_matrix_csc_values, lsa_matrix.rows(), lsa_matrix.cols()-1);
 	std::cout << "		Eigen to Arma completed" << std::endl;
 	arma::Mat<float> U;
 	arma::Col<float> s;
 	arma::Mat<float> V;
-	std::cout << "		7" << std::endl;
 	bool svds_good = arma::svds(U, s, V, X, 1);
-	std::cout << "		8" << std::endl;
 	if(rowind) free(rowind);
 	if(colptr) free(colptr);
 	if(!svds_good)

@@ -6,6 +6,7 @@
 	-) eigen3
 	-) libarmadillo
 	-) libarpack
+	-) libgfortran
 
 ## Need to create the following directories
 	-) files_not_mined/
