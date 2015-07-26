@@ -403,6 +403,19 @@ void row_normalize_matrix(Eigen::SparseMatrix<float>& m){
 	}
 }
 
+void construct_sparce_matrix_arma_file_ijv(arma::Mat<float>& m, std::string& file_name){
+	//std::cout << "Saving sparce matrix to file" << std::endl;
+	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
+	fprintf(s_h_w_m_f, "%llu,%llu\n",m.n_rows ,m.n_cols);
+	for (int k=0; k<m.n_rows; ++k){
+		for(int l=0; l<m.n_cols; ++l){
+			if (m(k,l) != (float)0)
+				fprintf(s_h_w_m_f, "%d,%d,%f\n",k,l,m(k,l));
+		}	
+	}
+	fclose (s_h_w_m_f);
+}
+
 void construct_sparce_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string& file_name){
 	//std::cout << "Saving sparce matrix to file" << std::endl;
 	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
@@ -512,7 +525,7 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 	}
 }
 
-void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix){
+void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matrix_file_u, std::string& out_matrix_file_sigma, std::string& out_matrix_file_v){
 	int ind_index = 0;
 	unsigned long long* rowind = (unsigned long long*)malloc(sizeof(unsigned long long) * lsa_matrix.nonZeros());
 	unsigned long long* colptr = (unsigned long long*)malloc(sizeof(unsigned long long) * lsa_matrix.outerSize()+1);
@@ -533,11 +546,19 @@ void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix){
 	arma::Mat<float> U;
 	arma::Col<float> s;
 	arma::Mat<float> V;
-	bool svds_good = arma::svds(U, s, V, X, 500);
+	int dims = 400;
+	bool svds_good = arma::svds(U, s, V, X, dims);
 	if(rowind) free(rowind);
 	if(colptr) free(colptr);
 	if(!svds_good)
 		std::cout << "		Partial decomp failed" << std::endl;
+	else{
+		std::cout << "		Partial decomp success" << std::endl;
+		arma::Mat<float> m_s_s = arma::diagmat(s);
+		construct_sparce_matrix_arma_file_ijv(U, out_matrix_file_u);
+		construct_sparce_matrix_arma_file_ijv(m_s_s, out_matrix_file_sigma);
+		construct_sparce_matrix_arma_file_ijv(V, out_matrix_file_v);
+	}
 }
 
 void start_mine_people(std::string& person){
@@ -567,7 +588,7 @@ void start_mine_people(std::string& person){
 			if(try_partial_decomp){
 				std::cout << " 	Trying partial svd " << std::endl;
 				Eigen::SparseMatrix<float> lsa_matrix = load_sparce_matrix(out_matrix_file);
-				partial_svd(lsa_matrix);
+				partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
 			}
 		}
 		return;
