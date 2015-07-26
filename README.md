@@ -1,12 +1,16 @@
 # Using LSA and related techniques to efficently search the emails released in the Hacking Team data dump  #
 
-## Dependencies:
+## Dependencies (in order):
 	-) libicu
 	-) libxml2
-	-) eigen3
-	-) libarmadillo
+	-) libeigen3
+	-) libgfortran (from libgcc)
+	-) liblapack (makes libblas to link against libsuperlu)
+	-) libblas
+	-) libsuperlu
+	-) libopenblas
 	-) libarpack
-	-) libgfortran
+	-) libarmadillo
 
 ## Need to create the following directories
 	-) files_not_mined/
