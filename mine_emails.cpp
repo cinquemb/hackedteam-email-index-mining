@@ -344,21 +344,21 @@ void parse_mine_files(std::vector<std::string>& mail_files, std::string& top_dir
 	}
 }
 
-Eigen::SparseMatrix<float> construct_sparce_matrix(std::map<std::string, std::string>& word_count_file_map, int& total_mined_emails, int& avg_words_per_file, std::string& person){
+Eigen::SparseMatrix<float> construct_sparse_matrix(std::map<std::string, std::string>& word_count_file_map, int& total_mined_emails, int& avg_words_per_file, std::string& person){
 	int number_of_words = word_count_file_map.size();
 	int estimated_avg_words_per_file = (int)std::ceil((float)avg_words_per_file * 10);
 	if(estimated_avg_words_per_file > number_of_words)
 		estimated_avg_words_per_file = number_of_words;
 
-	Eigen::SparseMatrix<float> SparceWordMatrix(number_of_words, total_mined_emails);
+	Eigen::SparseMatrix<float> sparseWordMatrix(number_of_words, total_mined_emails);
 	
-	SparceWordMatrix.reserve(Eigen::VectorXi::Constant(total_mined_emails, estimated_avg_words_per_file));
+	sparseWordMatrix.reserve(Eigen::VectorXi::Constant(total_mined_emails, estimated_avg_words_per_file));
 	std::vector<std::string> word_vector; 
 	std::string word_vector_file = "word_vectors/word_vector_order_"+ person+ ".txt";
 	transform(word_count_file_map.begin(), word_count_file_map.end(), back_inserter(word_vector), RetrieveKey());
 	std::sort(word_vector.begin(), word_vector.end());
 	save_data(word_vector_file, word_vector);
-	std::cout << "	Sparce matrix construction" << std::endl;
+	std::cout << "	sparse matrix construction" << std::endl;
 	for(int i=0;i<number_of_words;++i){
 		std::vector<std::string> tmp_word_counts = string_split(word_count_file_map[word_vector[i]]);
 		std::map<int, int> tmp_word_counts_map;
@@ -377,7 +377,7 @@ Eigen::SparseMatrix<float> construct_sparce_matrix(std::map<std::string, std::st
 		if(tmp_word_counts_size > 1){
 			//std::cout << "i: " << i << " tmp_word_counts_size: " << tmp_word_counts_size << std::endl;
 			for(int j=0; j<tmp_word_counts_size;++j){
-				SparceWordMatrix.coeffRef(i,tmp_word_counts_keys[j]) += (float)tmp_word_counts_map[tmp_word_counts_keys[j]];
+				sparseWordMatrix.coeffRef(i,tmp_word_counts_keys[j]) += (float)tmp_word_counts_map[tmp_word_counts_keys[j]];
 			}
 		}
 
@@ -385,8 +385,8 @@ Eigen::SparseMatrix<float> construct_sparce_matrix(std::map<std::string, std::st
 			std::cout << "		Word rows constructed: " << i << std::endl;
 		
 	}
-	SparceWordMatrix.makeCompressed();
-	return SparceWordMatrix;
+	sparseWordMatrix.makeCompressed();
+	return sparseWordMatrix;
 }
 
 void row_normalize_matrix(Eigen::SparseMatrix<float>& m){
@@ -403,32 +403,29 @@ void row_normalize_matrix(Eigen::SparseMatrix<float>& m){
 	}
 }
 
-void construct_sparce_matrix_arma_file_ijv(arma::Mat<float>& m, std::string& file_name){
-	//std::cout << "Saving sparce matrix to file" << std::endl;
+void construct_sparse_matrix_arma_file_ijv(arma::sp_fmat& m, std::string& file_name){
+	//std::cout << "Saving sparse matrix to file" << std::endl;
 	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
 	fprintf(s_h_w_m_f, "%llu,%llu\n",m.n_rows ,m.n_cols);
-	float zero_check = 0.0;
 	for (int k=0; k<m.n_rows; ++k){
-		for(int l=0; l<m.n_cols; ++l){
-			if (std::abs(m(k,l) + zero_check) > zero_check)
-				fprintf(s_h_w_m_f, "%d,%d,%f\n",k,l,m(k,l));
-		}	
+		for(arma::sp_fmat::const_row_iterator it=m.begin_row(k); it != m.end_row(k); ++it)
+			fprintf(s_h_w_m_f, "%d,%llu,%f\n",k,it.col(),*it);
 	}
 	fclose (s_h_w_m_f);
 }
 
-void construct_sparce_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string& file_name){
-	//std::cout << "Saving sparce matrix to file" << std::endl;
+void construct_sparse_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string& file_name){
+	//std::cout << "Saving sparse matrix to file" << std::endl;
 	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
 	fprintf(s_h_w_m_f, "%d,%d\n",m.rows(),m.cols());
 	for (int k=0; k<m.outerSize(); ++k){
 		for(Eigen::SparseMatrix<float>::InnerIterator it(m,k); it; ++it)
-			fprintf(s_h_w_m_f, "%d,%d,%f\n",it.row(),it.col(),it.value());
+			fprintf(s_h_w_m_f, "%d,%d,%f\n",k,it.col(),it.value());
 	}
 	fclose (s_h_w_m_f);
 }
 
-arma::sp_fmat eigen_sparce_to_sparce_matrix_armadillo(Eigen::SparseMatrix<float>& m){
+arma::sp_fmat eigen_sparse_to_sparse_matrix_armadillo(Eigen::SparseMatrix<float>& m){
 	arma::sp_fmat n_m(m.rows(), m.cols());
 	for (int k=0; k<m.outerSize(); ++k){
 		for(Eigen::SparseMatrix<float>::InnerIterator it(m,k); it; ++it){
@@ -438,7 +435,7 @@ arma::sp_fmat eigen_sparce_to_sparce_matrix_armadillo(Eigen::SparseMatrix<float>
 	return n_m;
 }
 
-Eigen::SparseMatrix<float> load_sparce_matrix(std::string& data_file_name){
+Eigen::SparseMatrix<float> load_sparse_matrix(std::string& data_file_name){
     std::string line;
     int line_count = 0;
     int files_count = 0;
@@ -446,8 +443,8 @@ Eigen::SparseMatrix<float> load_sparce_matrix(std::string& data_file_name){
     std::vector<Eigen::Triplet<float> > tripletList;
     std::ifstream in(data_file_name.c_str());
     if (!in.is_open()){
-        Eigen::SparseMatrix<float> SparceWordMatrix(files_count, words_count);
-        return SparceWordMatrix;
+        Eigen::SparseMatrix<float> sparseWordMatrix(files_count, words_count);
+        return sparseWordMatrix;
     }
 
     while (std::getline(in,line)){
@@ -469,10 +466,10 @@ Eigen::SparseMatrix<float> load_sparce_matrix(std::string& data_file_name){
         }
     	++line_count;
     }
-    Eigen::SparseMatrix<float> SparceWordMatrix(words_count, files_count);
-    SparceWordMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
-    std::cout << "		Sparce Matrix Loaded" << std::endl;
-    return SparceWordMatrix;
+    Eigen::SparseMatrix<float> sparseWordMatrix(words_count, files_count);
+    sparseWordMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
+    std::cout << "		sparse Matrix Loaded" << std::endl;
+    return sparseWordMatrix;
 }
 
 void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matrix_file_u, std::string& out_matrix_file_sigma, std::string& out_matrix_file_v, std::string& person){
@@ -495,32 +492,32 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 		*/
 
 		//std::cout << "		before storing U matrix" << std::endl;
-		Eigen::SparseMatrix<float> m_s_u_sparce;
+		Eigen::SparseMatrix<float> m_s_u_sparse;
 		{
 			Eigen::MatrixXf m_s_u = lsa_matrix_svd.matrixU();
-			m_s_u_sparce = m_s_u.sparseView();
+			m_s_u_sparse = m_s_u.sparseView();
 		}
 		
 		//std::cout << "		before storing Sigma matrix" << std::endl;
 		Eigen::VectorXf lsa_matrix_singular_values = lsa_matrix_svd.singularValues();
 		int dims = lsa_matrix_singular_values.size();
-		Eigen::SparseMatrix<float> m_s_s_sparce(dims,dims);
+		Eigen::SparseMatrix<float> m_s_s_sparse(dims,dims);
 		for(int i=0; i<dims;++i)
-			m_s_s_sparce.coeffRef(i,i) += lsa_matrix_singular_values[i];
+			m_s_s_sparse.coeffRef(i,i) += lsa_matrix_singular_values[i];
 
 				
 		//std::cout << "		before V* Sigma matrix" << std::endl;
-		Eigen::SparseMatrix<float> m_s_v_sparce;
+		Eigen::SparseMatrix<float> m_s_v_sparse;
 		{
 			Eigen::MatrixXf m_s_v = lsa_matrix_svd.matrixV();
-			m_s_v_sparce = m_s_v.sparseView();
+			m_s_v_sparse = m_s_v.sparseView();
 		}
 		
 		//serialize u/sigma/v matricies to txt file
 		//std::cout << "		Saving svd matricies" << std::endl;
-		construct_sparce_matrix_file_ijv(m_s_u_sparce, out_matrix_file_u);
-		construct_sparce_matrix_file_ijv(m_s_s_sparce, out_matrix_file_sigma);
-		construct_sparce_matrix_file_ijv(m_s_v_sparce, out_matrix_file_v);
+		construct_sparse_matrix_file_ijv(m_s_u_sparse, out_matrix_file_u);
+		construct_sparse_matrix_file_ijv(m_s_s_sparse, out_matrix_file_sigma);
+		construct_sparse_matrix_file_ijv(m_s_v_sparse, out_matrix_file_v);
 	}catch (std::bad_alloc& ba){
 		std::cout << "	Not enough memory for svd on: " << person << std::endl;
 	}
@@ -555,10 +552,13 @@ void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matrix
 		std::cout << "		Partial decomp failed" << std::endl;
 	else{
 		std::cout << "		Partial decomp success" << std::endl;
-		arma::Mat<float> m_s_s = arma::diagmat(s);
-		construct_sparce_matrix_arma_file_ijv(U, out_matrix_file_u);
-		construct_sparce_matrix_arma_file_ijv(m_s_s, out_matrix_file_sigma);
-		construct_sparce_matrix_arma_file_ijv(V, out_matrix_file_v);
+		arma::sp_fmat m_s_u_sparse = arma::sp_fmat(U);
+		arma::sp_fmat m_s_s_sparse = arma::sp_fmat(arma::diagmat(s));
+		arma::sp_fmat m_s_v_sparse = arma::sp_fmat(V);
+
+		construct_sparse_matrix_arma_file_ijv(m_s_u_sparse, out_matrix_file_u);
+		construct_sparse_matrix_arma_file_ijv(m_s_s_sparse, out_matrix_file_sigma);
+		construct_sparse_matrix_arma_file_ijv(m_s_v_sparse, out_matrix_file_v);
 	}
 }
 
@@ -581,14 +581,14 @@ void start_mine_people(std::string& person){
 				ht_file_check_sigma.close();
 				std::cout << "		SVD raw exists for: " << person << std::endl;
 			}else{
-				Eigen::SparseMatrix<float> lsa_matrix = load_sparce_matrix(out_matrix_file);
+				Eigen::SparseMatrix<float> lsa_matrix = load_sparse_matrix(out_matrix_file);
 				construct_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v, person);
 			}
 		}else{
 			std::cout << "IJV raw exists for: " << person << "\n 	To large for system to compute svd for: " << person  << std::endl;
 			if(try_partial_decomp){
 				std::cout << " 	Trying partial svd " << std::endl;
-				Eigen::SparseMatrix<float> lsa_matrix = load_sparce_matrix(out_matrix_file);
+				Eigen::SparseMatrix<float> lsa_matrix = load_sparse_matrix(out_matrix_file);
 				partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
 			}
 		}
@@ -613,7 +613,7 @@ void start_mine_people(std::string& person){
 		int avg_words_per_file = std::ceil(total_words_per_email/(float)total_mined_emails);
 		std::cout << "	Average words per file: " << avg_words_per_file << std::endl;
 		//words are rows, files are columns
-		Eigen::SparseMatrix<float> lsa_matrix = construct_sparce_matrix(word_count_file_map, total_mined_emails, avg_words_per_file, person);
+		Eigen::SparseMatrix<float> lsa_matrix = construct_sparse_matrix(word_count_file_map, total_mined_emails, avg_words_per_file, person);
 
 		//normalize the rows
 		row_normalize_matrix(lsa_matrix);
@@ -628,7 +628,7 @@ void start_mine_people(std::string& person){
 		file_index_not_used.clear();
 
 		//save ijv formate of matrix
-		construct_sparce_matrix_file_ijv(lsa_matrix, out_matrix_file);	
+		construct_sparse_matrix_file_ijv(lsa_matrix, out_matrix_file);	
 	}
 }
 		
