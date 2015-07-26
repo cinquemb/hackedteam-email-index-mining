@@ -409,7 +409,7 @@ void construct_sparce_matrix_arma_file_ijv(arma::Mat<float>& m, std::string& fil
 	fprintf(s_h_w_m_f, "%llu,%llu\n",m.n_rows ,m.n_cols);
 	for (int k=0; k<m.n_rows; ++k){
 		for(int l=0; l<m.n_cols; ++l){
-			if (m(k,l) != (float)0)
+			if ( std::abs(m(k,l)) > 0)
 				fprintf(s_h_w_m_f, "%d,%d,%f\n",k,l,m(k,l));
 		}	
 	}
