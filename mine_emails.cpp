@@ -407,9 +407,10 @@ void construct_sparce_matrix_arma_file_ijv(arma::Mat<float>& m, std::string& fil
 	//std::cout << "Saving sparce matrix to file" << std::endl;
 	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
 	fprintf(s_h_w_m_f, "%llu,%llu\n",m.n_rows ,m.n_cols);
+	float zero_check = 0.0;
 	for (int k=0; k<m.n_rows; ++k){
 		for(int l=0; l<m.n_cols; ++l){
-			if ( std::abs(m(k,l)) > 0)
+			if (std::abs(m(k,l) + zero_check) > zero_check)
 				fprintf(s_h_w_m_f, "%d,%d,%f\n",k,l,m(k,l));
 		}	
 	}
