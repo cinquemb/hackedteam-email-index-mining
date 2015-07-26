@@ -403,13 +403,16 @@ void row_normalize_matrix(Eigen::SparseMatrix<float>& m){
 	}
 }
 
-void construct_sparse_matrix_arma_file_ijv(arma::sp_fmat& m, std::string& file_name){
+void construct_sparse_matrix_arma_file_ijv(arma::fmat& m, std::string& file_name){
 	//std::cout << "Saving sparse matrix to file" << std::endl;
 	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
 	fprintf(s_h_w_m_f, "%llu,%llu\n",m.n_rows ,m.n_cols);
 	for (int k=0; k<m.n_rows; ++k){
-		for(arma::sp_fmat::const_row_iterator it=m.begin_row(k); it != m.end_row(k); ++it)
-			fprintf(s_h_w_m_f, "%d,%llu,%f\n",k,it.col(),*it);
+		for(arma::fmat::const_row_iterator it=m.begin_row(k); it != m.end_row(k); ++it){
+			if( (std::pow(*it,2)) > 0){
+				fprintf(s_h_w_m_f, "%d,%llu,%.12f\n",k,it.col,*it);
+			}
+		}
 	}
 	fclose (s_h_w_m_f);
 }
@@ -425,14 +428,27 @@ void construct_sparse_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string
 	fclose (s_h_w_m_f);
 }
 
-arma::sp_fmat eigen_sparse_to_sparse_matrix_armadillo(Eigen::SparseMatrix<float>& m){
-	arma::sp_fmat n_m(m.rows(), m.cols());
+arma::sp_fmat eigen_sparse_to_sparse_matrix_arma(Eigen::SparseMatrix<float>& m){
+	int ind_index = 0;
+	unsigned long long* rowind = (unsigned long long*)malloc(sizeof(unsigned long long) * m.nonZeros());
+	unsigned long long* colptr = (unsigned long long*)malloc(sizeof(unsigned long long) * m.outerSize()+1);
 	for (int k=0; k<m.outerSize(); ++k){
+		colptr[k] = ind_index;
 		for(Eigen::SparseMatrix<float>::InnerIterator it(m,k); it; ++it){
-			n_m(it.row(),it.col()) = it.value();
+			rowind[ind_index] = it.row();
+			++ind_index;
 		}
 	}
-	return n_m;
+	const arma::ucolvec arma_lsa_matrix_colptr(colptr, m.outerSize()+1, false, true);
+	const arma::ucolvec arma_lsa_matrix_rowind(rowind, m.nonZeros(), false, true);
+	const float* lsa_matrix_csc_values = m.valuePtr();
+	const arma::fcolvec arma_lsa_matrix_csc_values(lsa_matrix_csc_values, m.nonZeros());
+
+	arma::sp_fmat X(arma_lsa_matrix_rowind, arma_lsa_matrix_colptr, arma_lsa_matrix_csc_values, m.rows(), m.cols());
+	//if(rowind) free(rowind);
+	//if(colptr) free(colptr);
+	std::cout << "		Eigen to Arma completed" << std::endl;
+	return X;
 }
 
 Eigen::SparseMatrix<float> load_sparse_matrix(std::string& data_file_name){
@@ -468,7 +484,7 @@ Eigen::SparseMatrix<float> load_sparse_matrix(std::string& data_file_name){
     }
     Eigen::SparseMatrix<float> sparseWordMatrix(words_count, files_count);
     sparseWordMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
-    std::cout << "		sparse Matrix Loaded" << std::endl;
+    std::cout << "		Sparse Matrix Loaded" << std::endl;
     return sparseWordMatrix;
 }
 
@@ -524,41 +540,18 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 }
 
 void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matrix_file_u, std::string& out_matrix_file_sigma, std::string& out_matrix_file_v){
-	int ind_index = 0;
-	unsigned long long* rowind = (unsigned long long*)malloc(sizeof(unsigned long long) * lsa_matrix.nonZeros());
-	unsigned long long* colptr = (unsigned long long*)malloc(sizeof(unsigned long long) * lsa_matrix.outerSize()+1);
-	for (int k=0; k<lsa_matrix.outerSize(); ++k){
-		colptr[k] = ind_index;
-		for(Eigen::SparseMatrix<float>::InnerIterator it(lsa_matrix,k); it; ++it){
-			rowind[ind_index] = it.row();
-			++ind_index;
-		}
-	}
-	const arma::ucolvec arma_lsa_matrix_colptr(colptr, lsa_matrix.outerSize()+1, false, true);
-	const arma::ucolvec arma_lsa_matrix_rowind(rowind, lsa_matrix.nonZeros(), false, true);
-	const float* lsa_matrix_csc_values = lsa_matrix.valuePtr();
-	const arma::fcolvec arma_lsa_matrix_csc_values(lsa_matrix_csc_values, lsa_matrix.nonZeros());
-
-	arma::sp_fmat X(arma_lsa_matrix_rowind, arma_lsa_matrix_colptr, arma_lsa_matrix_csc_values, lsa_matrix.rows(), lsa_matrix.cols());
-	std::cout << "		Eigen to Arma completed" << std::endl;
-	arma::Mat<float> U;
-	arma::Col<float> s;
-	arma::Mat<float> V;
+	arma::sp_fmat X = eigen_sparse_to_sparse_matrix_arma(lsa_matrix);
+	arma::fmat U; arma::fvec s; arma::fmat V;
 	int dims = 400;
 	bool svds_good = arma::svds(U, s, V, X, dims);
-	if(rowind) free(rowind);
-	if(colptr) free(colptr);
 	if(!svds_good)
 		std::cout << "		Partial decomp failed" << std::endl;
 	else{
 		std::cout << "		Partial decomp success" << std::endl;
-		arma::sp_fmat m_s_u_sparse = arma::sp_fmat(U);
-		arma::sp_fmat m_s_s_sparse = arma::sp_fmat(arma::diagmat(s));
-		arma::sp_fmat m_s_v_sparse = arma::sp_fmat(V);
-
-		construct_sparse_matrix_arma_file_ijv(m_s_u_sparse, out_matrix_file_u);
-		construct_sparse_matrix_arma_file_ijv(m_s_s_sparse, out_matrix_file_sigma);
-		construct_sparse_matrix_arma_file_ijv(m_s_v_sparse, out_matrix_file_v);
+		arma::fmat m_s_s = arma::diagmat(s);
+		construct_sparse_matrix_arma_file_ijv(U, out_matrix_file_u);
+		construct_sparse_matrix_arma_file_ijv(m_s_s, out_matrix_file_sigma);
+		construct_sparse_matrix_arma_file_ijv(V, out_matrix_file_v);
 	}
 }
 
@@ -587,9 +580,15 @@ void start_mine_people(std::string& person){
 		}else{
 			std::cout << "IJV raw exists for: " << person << "\n 	To large for system to compute svd for: " << person  << std::endl;
 			if(try_partial_decomp){
-				std::cout << " 	Trying partial svd " << std::endl;
-				Eigen::SparseMatrix<float> lsa_matrix = load_sparse_matrix(out_matrix_file);
-				partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
+				std::ifstream ht_file_check_sigma(out_matrix_file_sigma);
+				if(ht_file_check_sigma.good()){
+					ht_file_check_sigma.close();
+					std::cout << "		SVD raw exists for: " << person << std::endl;
+				}else{
+					std::cout << " 	Trying partial svd " << std::endl;
+					Eigen::SparseMatrix<float> lsa_matrix = load_sparse_matrix(out_matrix_file);
+					partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
+				}
 			}
 		}
 		return;
