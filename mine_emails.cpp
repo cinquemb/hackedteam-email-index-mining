@@ -445,7 +445,7 @@ arma::sp_fmat eigen_sparse_to_sparse_matrix_arma(Eigen::SparseMatrix<float>& m){
 	const arma::ucolvec arma_lsa_matrix_rowind(rowind, rowind_size, false, true);
 	const float* lsa_matrix_csc_values = m.valuePtr();
 	const arma::fcolvec arma_lsa_matrix_csc_values(lsa_matrix_csc_values, rowind_size);
-	arma::sp_fmat X(arma_lsa_matrix_rowind, arma_lsa_matrix_colptr, arma_lsa_matrix_csc_values, m.rows(), m.cols());	
+	arma::sp_fmat X(arma_lsa_matrix_rowind, arma_lsa_matrix_colptr, arma_lsa_matrix_csc_values, m.rows(), m.cols());
 	if(rowind) free(rowind);
 	if(colptr) free(colptr);
 	return X;
@@ -459,7 +459,7 @@ Eigen::SparseMatrix<float> load_sparse_matrix(std::string& data_file_name){
     std::vector<Eigen::Triplet<float> > tripletList;
     std::ifstream in(data_file_name.c_str());
     if (!in.is_open()){
-        Eigen::SparseMatrix<float> sparseWordMatrix(files_count, words_count);
+        Eigen::SparseMatrix<float> sparseWordMatrix;
         return sparseWordMatrix;
     }
 
@@ -587,7 +587,11 @@ void start_mine_people(std::string& person){
 				}else{
 					std::cout << " 	Trying partial svd " << std::endl;
 					Eigen::SparseMatrix<float> lsa_matrix = load_sparse_matrix(out_matrix_file);
-					partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
+					//try{
+						partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
+					/*}catch(std::logic_error& le){
+						std::cout << "person: " << person << ", error: " << le.what() << std::endl;
+					}*/
 				}
 			}
 		}
