@@ -6,11 +6,11 @@ LD_LIBRARY_PATH=${HOME}/.local/lib:/opt/OpenBLAS/lib:/usr/local/lib64
 
 
 all:
-	export LD_LIBRARY_PATH
+	export $(LD_LIBRARY_PATH)
 	$(CXX) $(CFLAGS) mine_emails.cpp -o mine_emails $(LDFLAGS) $(LDLIBS)
 
 debug:
-	export LD_LIBRARY_PATH
+	export $(LD_LIBRARY_PATH)
 	$(CXX) -v -g $(CFLAGS) mine_emails.cpp -o mine_emails $(LDFLAGS) $(LDLIBS)
 
 clean:
