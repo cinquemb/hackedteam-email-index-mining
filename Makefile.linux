@@ -2,14 +2,15 @@ CXX=g++
 CFLAGS= -Wall -Os -O3 -std=gnu++11 -pedantic -I${HOME}/.local/include  -I${HOME}/.local/include/libxml2 -I${HOME}/.local/include/eigen3  
 LDLIBS= -licuio -licui18n -licuuc -licudata -lxml2 /opt/OpenBLAS/lib/libopenblas.so /usr/local/lib64/libarmadillo.so
 LDFLAGS= -L${HOME}/.local/lib
+LD_LIBRARY_PATH=${HOME}/.local/lib:/opt/OpenBLAS/lib:/usr/local/lib64
 
 
 all:
-	export LD_LIBRARY_PATH=$HOME/.local/lib:/opt/OpenBLAS/lib:/usr/local/lib64
+	export LD_LIBRARY_PATH
 	$(CXX) $(CFLAGS) mine_emails.cpp -o mine_emails $(LDFLAGS) $(LDLIBS)
 
 debug:
-	export LD_LIBRARY_PATH=$HOME/.local/lib:/opt/OpenBLAS/lib:/usr/local/lib64
+	export LD_LIBRARY_PATH
 	$(CXX) -v -g $(CFLAGS) mine_emails.cpp -o mine_emails $(LDFLAGS) $(LDLIBS)
 
 clean:
