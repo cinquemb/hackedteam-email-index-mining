@@ -4,7 +4,7 @@ all:
 	g++ $(CFLAGS) mine_emails.cpp -o mine_emails 
 
 debug:
-	g++ $(CFLAGS) -g mine_emails.cpp -o mine_emails 
+	g++ -v -g $(CFLAGS) mine_emails.cpp -o mine_emails 
 
 clean:
 	rm mine_emails
