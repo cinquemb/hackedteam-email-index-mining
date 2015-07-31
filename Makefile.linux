@@ -1,4 +1,4 @@
-#export LD_LIBRARY_PATH=${HOME}/.local/lib:/opt/OpenBLAS/lib:/usr/local/lib64
+export LD_LIBRARY_PATH=${HOME}/.local/lib:/opt/OpenBLAS/lib:/usr/local/lib64
 
 CXX=g++
 CFLAGS= -Wall -Os -O3 -std=gnu++11 -pedantic -I${HOME}/.local/include  -I${HOME}/.local/include/libxml2 -I${HOME}/.local/include/eigen3  
