@@ -1,4 +1,4 @@
-CFLAGS= -Wall -Os -O3 -std=gnu++11 -pedantic -I${HOME}/.local/include -L${HOME}/.local/lib -licuio -licui18n -licuuc -licudata -I${HOME}/.local/include/libxml2 -L${HOME}/.local/lib -lxml2 -I${HOME}/.local/include/eigen3 /usr/local/lib64/libarmadillo.so
+CFLAGS= -Wall -Os -O3 -std=gnu++11 -pedantic -I${HOME}/.local/include -L${HOME}/.local/lib -licuio -licui18n -licuuc -licudata -I${HOME}/.local/include/libxml2 -L${HOME}/.local/lib -lxml2 -I${HOME}/.local/include/eigen3 /usr/local/lib64/libarmadillo.so /opt/OpenBLAS/lib/libopenblas.a
 
 all:
 	g++ $(CFLAGS) mine_emails.cpp -o mine_emails 
