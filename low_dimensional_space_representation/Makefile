@@ -1,10 +1,10 @@
-CFLAGS= -Wall -Os -O3 -std=gnu++11 -pedantic `pkg-config --cflags --libs icu-uc icu-io` `pkg-config --cflags --libs libxml-2.0` `pkg-config --cflags --libs eigen3` /usr/local/lib/libarmadillo.dylib
+CFLAGS= -Wall -Os -O3 -std=gnu++11 -pedantic `pkg-config --cflags --libs eigen3` /usr/local/lib/libarmadillo.dylib
 
 all:
-	ccache clang++ mine_emails.cpp -o mine_emails $(CFLAGS)
+	ccache clang++ create_right_hand_uv.cpp -o create_right_hand_uv $(CFLAGS)
 
 debug:
-	ccache clang++ -v -g mine_emails.cpp -o mine_emails $(CFLAGS)
+	ccache clang++ -v -g create_right_hand_uv.cpp -o create_right_hand_uv $(CFLAGS)
 
 clean:
-	rm mine_emails
+	rm create_right_hand_uv

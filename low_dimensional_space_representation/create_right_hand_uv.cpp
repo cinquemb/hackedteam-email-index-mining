@@ -12,11 +12,22 @@
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <Eigen/Dense>
 
 #include <armadillo>
 
 std::string home_dir = std::getenv("HOME");
 std::string base_path = "low_dimensional_space_representation/";
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
 
 std::vector<std::string> load_people(std::string files_list){
 	std::cout << "Loading people" << std::endl; 
@@ -44,12 +55,12 @@ void construct_sparse_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string
 	fclose (s_h_w_m_f);
 }
 
-Eigen::MatrixXd<float> load_dense_matrix(std::string& data_file_name){
+Eigen::MatrixXf load_dense_matrix(std::string& data_file_name){
     std::string line;
     int line_count = 0;
     int rows = 0;
     int columns = 0;
-    Eigen::MatrixXd matrix;
+    Eigen::MatrixXf matrix;
     std::ifstream in(data_file_name.c_str());
     if (!in.is_open()){
         return matrix;
@@ -129,13 +140,13 @@ void start_right_hand_creation(std::string& person){
 		}
 	}
 
-	Eigen::MatrixXd<float> m_u_t = load_dense_matrix(matrix_file_u);
+	Eigen::MatrixXf m_u_t = load_dense_matrix(matrix_file_u);
 	m_u_t.transposeInPlace();
-	Eigen::MatrixXd<float> m_v_t = load_dense_matrix(matrix_file_v);
+	Eigen::MatrixXf m_v_t = load_dense_matrix(matrix_file_v);
 	m_v_t.transposeInPlace();
 
-	Eigen::SparseMatrix<float> isigma_ut = m_sigma_i * m_u_t;
-	Eigen::SparseMatrix<float> isigma_vt = m_sigma_i * m_v_t;
+	Eigen::SparseMatrix<float> isigma_ut = (m_sigma_i * m_u_t).sparseView();
+	Eigen::SparseMatrix<float> isigma_vt = (m_sigma_i * m_v_t).sparseView();
 
 	construct_sparse_matrix_file_ijv(isigma_ut, isigma_ut_matrix);
 	construct_sparse_matrix_file_ijv(isigma_vt, isigma_vt_matrix);
