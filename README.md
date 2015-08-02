@@ -18,6 +18,8 @@
 	-) u_matrices/
 	-) v_matrices/
 	-) word_vectors/
+	-) low_dimensional_space_representation/isigma_ut/
+	-) low_dimensional_space_representation/isigma_vt/
 
 ## NOTE: still a work in progress
 

@@ -403,7 +403,7 @@ void row_normalize_matrix(Eigen::SparseMatrix<float>& m){
 	}
 }
 
-void construct_sparse_matrix_arma_file_ijv(arma::fmat& m, std::string& file_name){
+void construct_matrix_arma_file_ijv(arma::fmat& m, std::string& file_name){
 	//std::cout << "Saving sparse matrix to file" << std::endl;
 	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
 	fprintf(s_h_w_m_f, "%llu,%llu\n",m.n_rows ,m.n_cols);
@@ -495,7 +495,7 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 		//std::cout << "		after Computing svd matricies" << std::endl;
   
 		/*
-			ref: ttps://en.wikipedia.org/wiki/Latent_semantic_analysis
+			ref: https://en.wikipedia.org/wiki/Latent_semantic_analysis
 			See how related documents j and q are in the low-dimensional space by comparing the vectors \Sigma_k \hat{\textbf{d}}_j and \Sigma_k \hat{\textbf{d}}_q (typically by cosine similarity).
 
 			Given a query, view this as a mini document, and compare it to your documents in the low-dimensional space.
@@ -549,9 +549,9 @@ void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matrix
 	else{
 		std::cout << "		Partial decomp success" << std::endl;
 		arma::fmat m_s_s = arma::diagmat(s);
-		construct_sparse_matrix_arma_file_ijv(U, out_matrix_file_u);
-		construct_sparse_matrix_arma_file_ijv(m_s_s, out_matrix_file_sigma);
-		construct_sparse_matrix_arma_file_ijv(V, out_matrix_file_v);
+		construct_matrix_arma_file_ijv(U, out_matrix_file_u);
+		construct_matrix_arma_file_ijv(m_s_s, out_matrix_file_sigma);
+		construct_matrix_arma_file_ijv(V, out_matrix_file_v);
 	}
 }
 
