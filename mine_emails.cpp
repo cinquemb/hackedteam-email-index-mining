@@ -36,7 +36,7 @@ std::vector<int> file_index_not_used;
 std::vector<std::string> not_enough_memory_for_svd;
 
 //experimental perameter related to how much memory svd will take and complete in a resonable time.
-int system_threash_hold = 1500000;
+int system_threash_hold = 1000;
 
 bool try_partial_decomp = true;
 

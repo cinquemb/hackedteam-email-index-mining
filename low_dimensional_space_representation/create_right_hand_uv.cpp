@@ -10,10 +10,6 @@
 
 #include <sys/stat.h>
 
-#include <Eigen/Core>
-#include <Eigen/Sparse>
-#include <Eigen/Dense>
-
 #include <armadillo>
 
 std::string home_dir = std::getenv("HOME");
@@ -44,23 +40,12 @@ std::vector<std::string> load_people(std::string files_list){
     return data_file_paths;
 }
 
-void construct_sparse_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string& file_name){
-	//std::cout << "Saving sparse matrix to file" << std::endl;
-	FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
-	fprintf(s_h_w_m_f, "%d,%d\n",m.rows(),m.cols());
-	for (int k=0; k<m.outerSize(); ++k){
-		for(Eigen::SparseMatrix<float>::InnerIterator it(m,k); it; ++it)
-			fprintf(s_h_w_m_f, "%d,%d,%E\n",k,it.col(),it.value());
-	}
-	fclose (s_h_w_m_f);
-}
-
-Eigen::MatrixXf load_dense_matrix(std::string& data_file_name){
+arma::fmat load_dense_matrix(std::string& data_file_name){
     std::string line;
     int line_count = 0;
     int rows = 0;
     int columns = 0;
-    Eigen::MatrixXf matrix;
+    arma::fmat matrix;
     std::ifstream in(data_file_name.c_str());
     if (!in.is_open()){
         return matrix;
@@ -71,7 +56,7 @@ Eigen::MatrixXf load_dense_matrix(std::string& data_file_name){
         		std::vector<std::string> datas = split(line, ',');
         		rows = std::atoi(datas[0].c_str());
         		columns = std::atoi(datas[1].c_str());
-        		matrix.resize(rows, columns);
+        		matrix.zeros(rows, columns);
             }else{
                 std::vector<std::string> datas = split(line, ',');
                 int i = std::atoi(datas[0].c_str());
@@ -82,46 +67,9 @@ Eigen::MatrixXf load_dense_matrix(std::string& data_file_name){
         }
     	++line_count;
     }
-    std::cout << "		Matrix Loaded" << std::endl;
     return matrix;
 }
 
-Eigen::SparseMatrix<float> load_sparse_matrix(std::string& data_file_name){
-    std::string line;
-    int line_count = 0;
-    int files_count = 0;
-    int words_count = 0;
-    std::vector<Eigen::Triplet<float> > tripletList;
-    std::ifstream in(data_file_name.c_str());
-    if (!in.is_open()){
-        Eigen::SparseMatrix<float> sparseWordMatrix;
-        return sparseWordMatrix;
-    }
-
-    while (std::getline(in,line)){
-        if(line.size() > 1){
-        	if(line_count == 0){
-        		std::vector<std::string> datas = split(line, ',');
-        		words_count = std::atoi(datas[0].c_str());
-        		files_count = std::atoi(datas[1].c_str());
-        		int estimation_of_entries = files_count * (int)(words_count/100);
-        		tripletList.reserve(estimation_of_entries);
-            }else{
-                std::vector<std::string> datas = split(line, ',');
-                int i = std::atoi(datas[0].c_str());
-                int j = std::atoi(datas[1].c_str());
-                float v_ij = std::atof(datas[2].c_str());
-                Eigen::Triplet<float> triplet(i,j,v_ij);
-                tripletList.push_back(triplet);
-            }
-        }
-    	++line_count;
-    }
-    Eigen::SparseMatrix<float> sparseWordMatrix(words_count, files_count);
-    sparseWordMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
-    std::cout << "		Sparse Matrix Loaded" << std::endl;
-    return sparseWordMatrix;
-}
 
 void start_right_hand_creation(std::string& person){
 	std::string matrix_file_u = "../u_matrices/HT_"+person+"_mail_words_matrix_u.txt";
@@ -131,25 +79,31 @@ void start_right_hand_creation(std::string& person){
 	std::string isigma_ut_matrix = "isigma_ut/HT_"+person+"_mail_words_matrix_isigma_ut.txt";
 	std::string isigma_vt_matrix = "isigma_vt/HT_"+person+"_mail_words_matrix_isigma_vt.txt";
 
-	Eigen::SparseMatrix<float> m_sigma_i = load_sparse_matrix(matrix_file_sigma);
 
-	for(int i=0; i< m_sigma_i.outerSize(); ++i){
-		for(Eigen::SparseMatrix<float>::InnerIterator it(m_sigma_i,i); it; ++it){
-			float inverse_value = (1/it.value());
-			it.valueRef() = inverse_value;
-		}
-	}
+    std::ifstream isigma_ut_matrix_file_check(isigma_ut_matrix);
+    if (isigma_ut_matrix_file_check.good()){
+        std::cout << "  RH exists for " << person << std::endl;
+    }else{
+        std::cout << "Reading RH for " << person << std::endl;
+        arma::fmat m_sigma_i = load_dense_matrix(matrix_file_sigma);
+        for(int i=0; i< m_sigma_i.n_rows; ++i){
+            float inverse_value = (1/m_sigma_i(i,i));
+            m_sigma_i(i,i) = inverse_value;
+        }
 
-	Eigen::MatrixXf m_u_t = load_dense_matrix(matrix_file_u);
-	m_u_t.transposeInPlace();
-	Eigen::MatrixXf m_v_t = load_dense_matrix(matrix_file_v);
-	m_v_t.transposeInPlace();
+        std::cout << "  Loading Dense Matrix U" << std::endl;
+        arma::fmat m_u_t = load_dense_matrix(matrix_file_u);
+        arma::inplace_trans(m_u_t);
+        std::cout << "  Loading Dense Matrix V" << std::endl;
+        arma::fmat m_v_t = load_dense_matrix(matrix_file_v);
+        arma::inplace_trans(m_v_t);
 
-	Eigen::SparseMatrix<float> isigma_ut = (m_sigma_i * m_u_t).sparseView();
-	Eigen::SparseMatrix<float> isigma_vt = (m_sigma_i * m_v_t).sparseView();
+        arma::fmat isigma_ut = m_sigma_i * m_u_t;
+        arma::fmat isigma_vt = m_sigma_i * m_v_t;
 
-	construct_sparse_matrix_file_ijv(isigma_ut, isigma_ut_matrix);
-	construct_sparse_matrix_file_ijv(isigma_vt, isigma_vt_matrix);
+        isigma_ut.save(isigma_ut_matrix,arma::raw_ascii);
+        isigma_vt.save(isigma_vt_matrix,arma::raw_ascii);
+    }
 }
 
 int main(int argc, char* argv[]){
