@@ -1,0 +1,13 @@
+CXX=g++
+CFLAGS= -Wall -Os -O3 -std=gnu++11 -pedantic -I${HOME}/.local/include -I${HOME}/.local/include/eigen3
+LDLIBS= /opt/OpenBLAS/lib/libopenblas.so /usr/local/lib64/libarmadillo.so
+LDFLAGS= -L${HOME}/.local/lib
+
+all:
+	$(CXX) $(CFLAGS) create_right_hand_uv.cpp -o create_right_hand_uv $(LDFLAGS) $(LDLIBS)
+
+debug:
+	$(CXX) -v -g $(CFLAGS) create_right_hand_uv.cpp -o create_right_hand_uv $(LDFLAGS) $(LDLIBS)
+
+clean:
+	rm create_right_hand_uv

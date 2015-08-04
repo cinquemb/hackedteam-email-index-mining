@@ -40,6 +40,20 @@ std::vector<std::string> load_people(std::string files_list){
     return data_file_paths;
 }
 
+void construct_matrix_arma_file_ijv(arma::fmat& m, std::string& file_name){
+    //std::cout << "Saving sparse matrix to file" << std::endl;
+    FILE* s_h_w_m_f = fopen(file_name.c_str(),"w");
+    fprintf(s_h_w_m_f, "%llu,%llu\n",m.n_rows ,m.n_cols);
+    for (int k=0; k<m.n_rows; ++k){
+        for(arma::fmat::const_row_iterator it=m.begin_row(k); it != m.end_row(k); ++it){
+            if( (std::pow(*it,2)) > 0){
+                fprintf(s_h_w_m_f, "%d,%llu,%E\n",k,it.col,*it);
+            }
+        }
+    }
+    fclose (s_h_w_m_f);
+}
+
 arma::fmat load_dense_matrix(std::string& data_file_name){
     std::string line;
     int line_count = 0;
@@ -98,11 +112,15 @@ void start_right_hand_creation(std::string& person){
         arma::fmat m_v_t = load_dense_matrix(matrix_file_v);
         arma::inplace_trans(m_v_t);
 
+        //multiply isigma_ut, m_u_t by inverse(m_sigma_i) to get m_u_t and m_v_t, respectivly
         arma::fmat isigma_ut = m_sigma_i * m_u_t;
         arma::fmat isigma_vt = m_sigma_i * m_v_t;
 
-        isigma_ut.save(isigma_ut_matrix,arma::raw_ascii);
-        isigma_vt.save(isigma_vt_matrix,arma::raw_ascii);
+        construct_matrix_arma_file_ijv(isigma_ut, isigma_ut_matrix);
+        construct_matrix_arma_file_ijv(isigma_vt, isigma_vt_matrix);
+
+        //isigma_ut.save(isigma_ut_matrix,arma::raw_ascii);
+        //isigma_vt.save(isigma_vt_matrix,arma::raw_ascii);
     }
 }
 
