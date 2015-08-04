@@ -17,14 +17,6 @@
 
 #include <armadillo>
 
-
-/* load in isigma_ut or isigma_vt if emails trying to find documents that match query or most relevent doucument by search term*/
-
-/* load in sparce matrix for each person and compute each message into the lower dimensional space */
-
-/* take term and translate it into lower dimensional space using the word map and " ,"  delimiter */
-
-/* compute the cosine distances between the terms and each message in the lower dimensional space and return map with distance */
 std::vector<std::string> split(const std::string &s, char delim) {
     std::vector<std::string> elems;
     std::stringstream ss(s);
@@ -190,14 +182,22 @@ void search_person(std::string& person, std::string& search_query){
 	std::vector<std::string> search_words = string_split(search_query);
 
 	Eigen::SparseMatrix<float> tf_doc_matrix = load_eigen_sparse_matrix(tf_doc_matrix_file);
-	for(int i=0; i< tf_doc_matrix.outerSize();++i){
-		arma::icolvec temp_doc_col_vector(word_vector_size);
-		temp_doc_col_vector.zeros();
-		//temp_doc_col_vector[i] = it.value();
-		for(Eigen::SparseMatrix<float>::InnerIterator it(tf_doc_matrix,i); it; ++it)
-			std::cout << " row:" << i << " col: " << it.col()<< " value: " << it.value()  << std::endl;
-	}
 	arma::fmat isigma_ut_matrix = load_dense_matrix(isigma_ut_matrix_file);
+
+	for(int i=0; i< tf_doc_matrix.outerSize();++i){
+		arma::fcolvec temp_doc_col_vector(word_vector_size);
+		temp_doc_col_vector.zeros();
+		bool is_empty = true;
+		for(Eigen::SparseMatrix<float>::InnerIterator it(tf_doc_matrix,i); it; ++it){
+			is_empty = false;
+			temp_doc_col_vector[it.row()] = it.value();
+		}
+
+		if(!is_empty){
+			arma::fcolvec low_dimensional_space_doc_vector = isigma_ut_matrix * temp_doc_col_vector;
+		}
+	}
+	
 	exit(0);
 }
 
