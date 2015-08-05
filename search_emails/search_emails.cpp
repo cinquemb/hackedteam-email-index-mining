@@ -17,6 +17,10 @@
 
 #include <armadillo>
 
+std::string home_dir = std::getenv("HOME");
+
+std::map<std::string, int> stop_words_map;
+
 std::vector<std::string> split(const std::string &s, char delim) {
     std::vector<std::string> elems;
     std::stringstream ss(s);
@@ -27,10 +31,31 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
+template <class T1, class T2, class Pred = std::less<T2> >
+struct sort_pair_second {
+    bool operator()(const std::pair<T1,T2>&left, const std::pair<T1,T2>&right) {
+        Pred p;
+        return p(left.second, right.second);
+    }
+};
+
 std::vector<std::string> string_split(std::string const &input) {
     std::istringstream buffer(input);
     std::vector<std::string> ret((std::istream_iterator<std::string>(buffer)), std::istream_iterator<std::string>());
     return ret;
+}
+
+std::vector<std::string> filter_words(std::vector<std::string>& temp_words){
+	char chars[] = "()-.!'~\"><";
+	std::vector<std::string> words;
+	for(int i=0;i<temp_words.size();++i){
+		for(int j = 0; j < strlen(chars); ++j){
+			temp_words[i].erase(std::remove(temp_words[i].begin(), temp_words[i].end(), chars[j]), temp_words[i].end());
+		}
+		if(stop_words_map.count(temp_words[i]) == 0)
+			words.push_back(temp_words[i]);
+	}
+	return words;
 }
 
 std::vector<std::string> load_people(std::string files_list){
@@ -46,6 +71,33 @@ std::vector<std::string> load_people(std::string files_list){
         }   
     }
     return data_file_paths;
+}
+
+std::map<std::string, int> load_stop_words(std::string stop_words_file_list){
+	std::cout << "Loading Stop Words" << std::endl; 
+	std::vector<std::string> stop_words_file_paths;
+	std::map<std::string, int> stop_words;
+    std::string line;
+    std::ifstream in(stop_words_file_list.c_str());
+    if (!in.is_open()) return stop_words;
+
+    while (std::getline(in,line)){
+        if(line.size() > 1)
+            stop_words_file_paths.push_back(line);
+    }
+    in.close();
+
+    for(int i=0; i<stop_words_file_paths.size(); i++){
+    	std::ifstream ts_in(stop_words_file_paths[i].c_str());
+	    if (!ts_in.is_open()) continue;
+
+	    while (std::getline(ts_in,line)){
+	        if(line.size() > 1)
+	            stop_words[line] = 1;
+	    }
+	    ts_in.close();
+    }
+    return stop_words;
 }
 
 std::map<std::string,int> load_word_map(std::string& word_vector_file){
@@ -92,13 +144,13 @@ arma::fmat load_dense_matrix(std::string& data_file_name){
                 std::vector<std::string> datas = split(line, ',');
                 int i = std::atoi(datas[0].c_str());
                 int j = std::atoi(datas[1].c_str());
-                float v_ij = std::atof(datas[2].c_str());
+                double v_ij = std::atof(datas[2].c_str());
                 matrix(i,j) = v_ij;
             }
         }
     	++line_count;
     }
-    std::cout << "	Dense Arma Matrix Loaded" << std::endl;
+    //std::cout << "	Dense Arma Matrix Loaded" << std::endl;
     return matrix;
 }
 
@@ -123,25 +175,25 @@ arma::sp_fmat load_arma_sparce_matrix(std::string& data_file_name){
                 std::vector<std::string> datas = split(line, ',');
                 int i = std::atoi(datas[0].c_str());
                 int j = std::atoi(datas[1].c_str());
-                float v_ij = std::atof(datas[2].c_str());
+                double v_ij = std::atof(datas[2].c_str());
                 matrix(i,j) = v_ij;
             }
         }
     	++line_count;
     }
-    std::cout << "	Sparse Arma Matrix Loaded" << std::endl;
+    //std::cout << "	Sparse Arma Matrix Loaded" << std::endl;
     return matrix;
 }
 
-Eigen::SparseMatrix<float> load_eigen_sparse_matrix(std::string& data_file_name){
+Eigen::SparseMatrix<double> load_eigen_sparse_matrix(std::string& data_file_name){
     std::string line;
     int line_count = 0;
     int files_count = 0;
     int words_count = 0;
-    std::vector<Eigen::Triplet<float> > tripletList;
+    std::vector<Eigen::Triplet<double> > tripletList;
     std::ifstream in(data_file_name.c_str());
     if (!in.is_open()){
-        Eigen::SparseMatrix<float> sparseWordMatrix;
+        Eigen::SparseMatrix<double> sparseWordMatrix;
         return sparseWordMatrix;
     }
 
@@ -157,20 +209,38 @@ Eigen::SparseMatrix<float> load_eigen_sparse_matrix(std::string& data_file_name)
                 std::vector<std::string> datas = split(line, ',');
                 int i = std::atoi(datas[0].c_str());
                 int j = std::atoi(datas[1].c_str());
-                float v_ij = std::atof(datas[2].c_str());
-                Eigen::Triplet<float> triplet(i,j,v_ij);
+                double v_ij = std::atof(datas[2].c_str());
+                Eigen::Triplet<double> triplet(i,j,v_ij);
                 tripletList.push_back(triplet);
             }
         }
     	++line_count;
     }
-    Eigen::SparseMatrix<float> sparseWordMatrix(words_count, files_count);
+    Eigen::SparseMatrix<double> sparseWordMatrix(words_count, files_count);
     sparseWordMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
-    std::cout << "	Sparse Eigen Matrix Loaded" << std::endl;
+    //std::cout << "	Sparse Eigen Matrix Loaded" << std::endl;
     return sparseWordMatrix;
 }
 
-void search_person(std::string& person, std::string& search_query){
+double compute_distance(std::map<int, std::string>& seach_query_word_index_map, arma::fcolvec& temp_low_dimensional_space_doc_vector, int& word_vector_size){
+	double sum = 0.0;
+	for(int i=0;i<word_vector_size;++i){
+		double inner;
+		if(seach_query_word_index_map.count(i) > 0)
+			inner = std::pow((1-temp_low_dimensional_space_doc_vector[i]),2);
+		else
+			inner = std::pow(temp_low_dimensional_space_doc_vector[i],2);
+		sum += inner;
+	}
+	if(sum == 0)
+		return 0;
+	else{
+		double d = std::sqrt(sum);
+		return d;
+	}
+}
+
+std::vector<std::pair<int, double> > search_person(std::string& person, std::string& search_query){
 	std::string word_vector_file = "../word_vectors/word_vector_order_"+ person+ ".txt";
 	std::string tf_doc_matrix_file = "../raw_matrices/HT_"+person+"_mail_words_matrix_raw.txt";
 	std::string isigma_ut_matrix_file = "../low_dimensional_space_representation/isigma_ut/HT_"+person+"_mail_words_matrix_isigma_ut.txt";
@@ -180,34 +250,63 @@ void search_person(std::string& person, std::string& search_query){
 	int word_vector_size = words_index_map.size();
 	arma::icolvec search_query_temp_doc(word_vector_size);
 	std::vector<std::string> search_words = string_split(search_query);
+	search_words = filter_words(search_words);
+	std::map<int, std::string> seach_query_word_index_map;
+	std::vector<std::pair<int, double> > doc_index_distance_map_vector;
+	
+	
+	for(int i=0; i< search_words.size(); ++i){
+		if(words_index_map.count(search_words[i]) > 0)
+			seach_query_word_index_map[words_index_map[search_words[i]]] = search_words[i];
+	}
 
-	Eigen::SparseMatrix<float> tf_doc_matrix = load_eigen_sparse_matrix(tf_doc_matrix_file);
+	if(seach_query_word_index_map.size() == 0)
+		return doc_index_distance_map_vector;
+
+	Eigen::SparseMatrix<double> tf_doc_matrix = load_eigen_sparse_matrix(tf_doc_matrix_file);
 	arma::fmat isigma_ut_matrix = load_dense_matrix(isigma_ut_matrix_file);
 
 	for(int i=0; i< tf_doc_matrix.outerSize();++i){
 		arma::fcolvec temp_doc_col_vector(word_vector_size);
 		temp_doc_col_vector.zeros();
 		bool is_empty = true;
-		for(Eigen::SparseMatrix<float>::InnerIterator it(tf_doc_matrix,i); it; ++it){
+		for(Eigen::SparseMatrix<double>::InnerIterator it(tf_doc_matrix,i); it; ++it){
 			is_empty = false;
-			temp_doc_col_vector[it.row()] = it.value();
+			temp_doc_col_vector[(int)it.row()] = it.value();
 		}
 
 		if(!is_empty){
-			arma::fcolvec low_dimensional_space_doc_vector = isigma_ut_matrix * temp_doc_col_vector;
+
+			assert(isigma_ut_matrix.n_cols == word_vector_size);
+
+			arma::fcolvec temp_low_dimensional_space_doc_vector = isigma_ut_matrix * temp_doc_col_vector;
+			double distance = compute_distance(seach_query_word_index_map, temp_low_dimensional_space_doc_vector, word_vector_size);
+			std::pair<int,double> tmp_pair = std::make_pair(i,distance);
+			doc_index_distance_map_vector.push_back(tmp_pair);
 		}
 	}
-	
-	exit(0);
+
+	std::cout << "	person: " << person << " total docs: " << word_vector_size << std::endl;
+	std::sort(doc_index_distance_map_vector.begin(), doc_index_distance_map_vector.end(), sort_pair_second<int,double>());
+	return doc_index_distance_map_vector;
 }
 
 int main(int argc, char* argv[]){
 	std::string person_list_file = "../people_file_list.md";
+	std::string stop_words_file_list = "../stop_words_file_list.txt";
 	std::vector<std::string> person_list = load_people(person_list_file);
-	std::vector<std::map<int, double> > search_result_file_indexes;
-	std::string search_query = "Hi";
-	for(int i=0;i<person_list.size();++i)
-		search_person(person_list[i], search_query);
-	//search_result_file_indexes.push_back(search_person(person_list[i], search_query));
+	std::vector<std::vector<std::pair<int, double> > > search_result_file_indexes;
+	std::string search_query = "resell contractor usa";
+	if(search_query.size() == 0)
+		return 1;
+
+	stop_words_map = load_stop_words(stop_words_file_list);
+	for(int i=0;i<person_list.size();++i){
+		std::vector<std::pair<int, double> > person_sorted_closest_docs = search_person(person_list[i], search_query);
+		if(person_sorted_closest_docs.size() > 0)
+			std::cout << "	person: " << person_list[i] << " top doc index: " << person_sorted_closest_docs[0].first << " distance: " <<person_sorted_closest_docs[0].second << " num_docs: " << person_sorted_closest_docs.size() << std::endl;
+		else
+			std::cout << "No docs found for " << person_list[i] << std::endl;
+	}
 	return 0;
 }
