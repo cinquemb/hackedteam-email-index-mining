@@ -123,12 +123,12 @@ std::map<std::string,int> load_word_map(std::string& word_vector_file){
 	return words;
 }
 
-arma::fmat load_dense_matrix(std::string& data_file_name){
+arma::mat load_dense_matrix(std::string& data_file_name){
     std::string line;
     int line_count = 0;
     int rows = 0;
     int columns = 0;
-    arma::fmat matrix;
+    arma::mat matrix;
     std::ifstream in(data_file_name.c_str());
     if (!in.is_open()){
         return matrix;
@@ -222,14 +222,14 @@ Eigen::SparseMatrix<double> load_eigen_sparse_matrix(std::string& data_file_name
     return sparseWordMatrix;
 }
 
-double compute_distance(std::map<int, std::string>& seach_query_word_index_map, arma::fcolvec& temp_low_dimensional_space_doc_vector, int& word_vector_size){
+double compute_distance(std::map<int, std::string>& seach_query_word_index_map, arma::mat& temp_low_dimensional_space_doc_vector){
 	double sum = 0.0;
-	for(int i=0;i<word_vector_size;++i){
+	for(int i=0;i<temp_low_dimensional_space_doc_vector.n_rows;++i){
 		double inner;
 		if(seach_query_word_index_map.count(i) > 0)
-			inner = std::pow((1-temp_low_dimensional_space_doc_vector[i]),2);
+			inner = std::pow((1-temp_low_dimensional_space_doc_vector(i,0)),2);
 		else
-			inner = std::pow(temp_low_dimensional_space_doc_vector[i],2);
+			inner = std::pow(temp_low_dimensional_space_doc_vector(i,0),2);
 		sum += inner;
 	}
 	if(sum == 0)
@@ -248,7 +248,6 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 
 	std::map<std::string,int> words_index_map = load_word_map(word_vector_file);
 	int word_vector_size = words_index_map.size();
-	arma::icolvec search_query_temp_doc(word_vector_size);
 	std::vector<std::string> search_words = string_split(search_query);
 	search_words = filter_words(search_words);
 	std::map<int, std::string> seach_query_word_index_map;
@@ -264,23 +263,24 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 		return doc_index_distance_map_vector;
 
 	Eigen::SparseMatrix<double> tf_doc_matrix = load_eigen_sparse_matrix(tf_doc_matrix_file);
-	arma::fmat isigma_ut_matrix = load_dense_matrix(isigma_ut_matrix_file);
+	arma::mat isigma_ut_matrix = load_dense_matrix(isigma_ut_matrix_file);
 
 	for(int i=0; i< tf_doc_matrix.outerSize();++i){
-		arma::fcolvec temp_doc_col_vector(word_vector_size);
+		//arma::colvec temp_doc_col_vector(word_vector_size);
+		arma::mat temp_doc_col_vector(word_vector_size,1);
 		temp_doc_col_vector.zeros();
 		bool is_empty = true;
 		for(Eigen::SparseMatrix<double>::InnerIterator it(tf_doc_matrix,i); it; ++it){
 			is_empty = false;
-			temp_doc_col_vector[(int)it.row()] = it.value();
+			temp_doc_col_vector((int)it.row(),0) = it.value();
 		}
 
 		if(!is_empty){
 
 			assert(isigma_ut_matrix.n_cols == word_vector_size);
 
-			arma::fcolvec temp_low_dimensional_space_doc_vector = isigma_ut_matrix * temp_doc_col_vector;
-			double distance = compute_distance(seach_query_word_index_map, temp_low_dimensional_space_doc_vector, word_vector_size);
+			arma::mat temp_low_dimensional_space_doc_vector = isigma_ut_matrix * temp_doc_col_vector;
+			double distance = compute_distance(seach_query_word_index_map, temp_low_dimensional_space_doc_vector);
 			std::pair<int,double> tmp_pair = std::make_pair(i,distance);
 			doc_index_distance_map_vector.push_back(tmp_pair);
 		}
