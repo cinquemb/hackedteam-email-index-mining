@@ -31,7 +31,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
-template <class T1, class T2, class Pred = std::less<T2> >
+template <class T1, class T2, class Pred = std::greater<T2> >
 struct sort_pair_second {
     bool operator()(const std::pair<T1,T2>&left, const std::pair<T1,T2>&right) {
         Pred p;
@@ -222,21 +222,25 @@ Eigen::SparseMatrix<double> load_eigen_sparse_matrix(std::string& data_file_name
     return sparseWordMatrix;
 }
 
-double compute_distance(std::map<int, std::string>& seach_query_word_index_map, arma::mat& temp_low_dimensional_space_doc_vector){
+double compute_distance(arma::mat& search_query_low_dimensional_space_doc_vector, arma::mat& temp_low_dimensional_space_doc_vector){
 	double sum = 0.0;
+    double a = 0.0;
+    double b = 0.0;
 	for(int i=0;i<temp_low_dimensional_space_doc_vector.n_rows;++i){
-		double inner;
-		if(seach_query_word_index_map.count(i) > 0)
-			inner = std::pow((1-temp_low_dimensional_space_doc_vector(i,0)),2);
-		else
-			inner = std::pow(temp_low_dimensional_space_doc_vector(i,0),2);
-		sum += inner;
+		sum += temp_low_dimensional_space_doc_vector(i,0) * search_query_low_dimensional_space_doc_vector(i,0);
+        a += std::pow(temp_low_dimensional_space_doc_vector(i,0),2);
+        b += std::pow(search_query_low_dimensional_space_doc_vector(i,0),2);
 	}
-	if(sum == 0)
-		return 0;
-	else{
-		double d = std::sqrt(sum);
-		return d;
+
+
+    a = std::sqrt(a);
+    b = std::sqrt(b);
+	if(sum == 0){
+        return 0;
+    }
+    else{
+		double cos_theta = sum/(a*b);
+		return cos_theta;
 	}
 }
 
@@ -262,8 +266,17 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 	if(seach_query_word_index_map.size() == 0)
 		return doc_index_distance_map_vector;
 
-	Eigen::SparseMatrix<double> tf_doc_matrix = load_eigen_sparse_matrix(tf_doc_matrix_file);
-	arma::mat isigma_ut_matrix = load_dense_matrix(isigma_ut_matrix_file);
+    Eigen::SparseMatrix<double> tf_doc_matrix = load_eigen_sparse_matrix(tf_doc_matrix_file);
+    arma::mat isigma_ut_matrix = load_dense_matrix(isigma_ut_matrix_file);
+
+
+    arma::mat search_doc_vector(word_vector_size,1);
+    search_doc_vector.zeros();
+    for(std::map<int,std::string>::iterator iter = seach_query_word_index_map.begin(); iter != seach_query_word_index_map.end(); ++iter){
+        std::cout << iter->first << std::endl;
+        search_doc_vector(iter->first,0) = 1;
+    }
+    arma::mat search_low_dimensional_space_doc_vector = isigma_ut_matrix * search_doc_vector;
 
 	for(int i=0; i< tf_doc_matrix.outerSize();++i){
 		//arma::colvec temp_doc_col_vector(word_vector_size);
@@ -276,11 +289,9 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 		}
 
 		if(!is_empty){
-
 			assert(isigma_ut_matrix.n_cols == word_vector_size);
-
 			arma::mat temp_low_dimensional_space_doc_vector = isigma_ut_matrix * temp_doc_col_vector;
-			double distance = compute_distance(seach_query_word_index_map, temp_low_dimensional_space_doc_vector);
+			double distance = compute_distance(search_low_dimensional_space_doc_vector, temp_low_dimensional_space_doc_vector);
 			std::pair<int,double> tmp_pair = std::make_pair(i,distance);
 			doc_index_distance_map_vector.push_back(tmp_pair);
 		}
@@ -292,11 +303,19 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 }
 
 int main(int argc, char* argv[]){
+	std::string search_query;
+	if(argc < 2){
+		std::cout << "usage: ./search_emails \"query\"" << std::endl;
+		return 1;
+	}else{
+		search_query = argv[1];
+	}
+	
 	std::string person_list_file = "../people_file_list.md";
 	std::string stop_words_file_list = "../stop_words_file_list.txt";
 	std::vector<std::string> person_list = load_people(person_list_file);
 	std::vector<std::vector<std::pair<int, double> > > search_result_file_indexes;
-	std::string search_query = "resell contractor usa";
+	
 	if(search_query.size() == 0)
 		return 1;
 
