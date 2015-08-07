@@ -222,7 +222,7 @@ Eigen::SparseMatrix<double> load_eigen_sparse_matrix(std::string& data_file_name
     return sparseWordMatrix;
 }
 
-double compute_distance(arma::mat& search_query_low_dimensional_space_doc_vector, arma::mat& temp_low_dimensional_space_doc_vector){
+double compute_cosine_theta_distance(arma::mat& search_query_low_dimensional_space_doc_vector, arma::mat& temp_low_dimensional_space_doc_vector){
 	double sum = 0.0;
     double a = 0.0;
     double b = 0.0;
@@ -247,6 +247,7 @@ double compute_distance(arma::mat& search_query_low_dimensional_space_doc_vector
 std::vector<std::pair<int, double> > search_person(std::string& person, std::string& search_query){
 	std::string word_vector_file = "../word_vectors/word_vector_order_"+ person+ ".txt";
 	std::string tf_doc_matrix_file = "../raw_matrices/HT_"+person+"_mail_words_matrix_raw.txt";
+    std::string sigma_matrix_file = "../sigma_matrices/HT_"+person+"_mail_words_matrix_sigma.txt";
 	std::string isigma_ut_matrix_file = "../low_dimensional_space_representation/isigma_ut/HT_"+person+"_mail_words_matrix_isigma_ut.txt";
 	std::string isigma_vt_matrix_file = "../low_dimensional_space_representation/isigma_vt/HT_"+person+"_mail_words_matrix_isigma_vt.txt";
 
@@ -268,6 +269,7 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 
     Eigen::SparseMatrix<double> tf_doc_matrix = load_eigen_sparse_matrix(tf_doc_matrix_file);
     arma::mat isigma_ut_matrix = load_dense_matrix(isigma_ut_matrix_file);
+    arma::mat sigma_matrix = load_dense_matrix(sigma_matrix_file);
 
 
     arma::mat search_doc_vector(word_vector_size,1);
@@ -277,6 +279,7 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
         search_doc_vector(iter->first,0) = 1;
     }
     arma::mat search_low_dimensional_space_doc_vector = isigma_ut_matrix * search_doc_vector;
+    arma::mat sigma_search_low_dimensional_space_doc_vector = sigma_matrix * search_low_dimensional_space_doc_vector;
 
 	for(int i=0; i< tf_doc_matrix.outerSize();++i){
 		//arma::colvec temp_doc_col_vector(word_vector_size);
@@ -291,7 +294,8 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 		if(!is_empty){
 			assert(isigma_ut_matrix.n_cols == word_vector_size);
 			arma::mat temp_low_dimensional_space_doc_vector = isigma_ut_matrix * temp_doc_col_vector;
-			double distance = compute_distance(search_low_dimensional_space_doc_vector, temp_low_dimensional_space_doc_vector);
+            arma::mat sigma_temp_low_dimensional_space_doc_vector= sigma_matrix * temp_low_dimensional_space_doc_vector;
+			double distance = compute_cosine_theta_distance(sigma_search_low_dimensional_space_doc_vector, sigma_temp_low_dimensional_space_doc_vector);
 			std::pair<int,double> tmp_pair = std::make_pair(i,distance);
 			doc_index_distance_map_vector.push_back(tmp_pair);
 		}
