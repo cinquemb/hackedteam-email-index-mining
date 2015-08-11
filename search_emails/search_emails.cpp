@@ -301,7 +301,7 @@ std::vector<std::pair<int, double> > search_person(std::string& person, std::str
 		}
 	}
 
-	std::cout << "	person: " << person << " total docs: " << word_vector_size << std::endl;
+	std::cout << "	person: " << person << " total docs: " << doc_index_distance_map_vector.size() << std::endl;
 	std::sort(doc_index_distance_map_vector.begin(), doc_index_distance_map_vector.end(), sort_pair_second<int,double>());
 	return doc_index_distance_map_vector;
 }
