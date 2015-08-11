@@ -17,6 +17,7 @@
 	-) raw_matrices/
 	-) u_matrices/
 	-) v_matrices/
+	-) sigma_matricies/
 	-) word_vectors/
 	-) low_dimensional_space_representation/isigma_ut/
 	-) low_dimensional_space_representation/isigma_vt/
