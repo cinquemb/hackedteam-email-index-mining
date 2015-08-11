@@ -410,7 +410,7 @@ void construct_matrix_arma_file_ijv(arma::fmat& m, std::string& file_name){
 	for (int k=0; k<m.n_rows; ++k){
 		for(arma::fmat::const_row_iterator it=m.begin_row(k); it != m.end_row(k); ++it){
 			if( (std::pow(*it,2)) > 0){
-				fprintf(s_h_w_m_f, "%d,%llu,%E\n",k,it.col,*it);
+				fprintf(s_h_w_m_f, "%d,%llu,%E\n",k.row,it.col,*it);
 			}
 		}
 	}
@@ -423,7 +423,7 @@ void construct_sparse_matrix_file_ijv(Eigen::SparseMatrix<float>& m, std::string
 	fprintf(s_h_w_m_f, "%d,%d\n",m.rows(),m.cols());
 	for (int k=0; k<m.outerSize(); ++k){
 		for(Eigen::SparseMatrix<float>::InnerIterator it(m,k); it; ++it)
-			fprintf(s_h_w_m_f, "%d,%d,%E\n",k,it.col(),it.value());
+			fprintf(s_h_w_m_f, "%d,%d,%E\n",k.row(),it.col(),it.value());
 	}
 	fclose (s_h_w_m_f);
 }
