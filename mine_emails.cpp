@@ -451,7 +451,39 @@ arma::sp_fmat eigen_sparse_to_sparse_matrix_arma(Eigen::SparseMatrix<float>& m){
 	return X;
 }
 
+arma::sp_fmat load_arma_sparce_matrix(std::string& data_file_name){
+    std::string line;
+    int line_count = 0;
+    int rows = 0;
+    int columns = 0;
+    arma::sp_fmat matrix;
+    std::ifstream in(data_file_name.c_str());
+    if (!in.is_open()){
+        return matrix;
+    }
+    while (std::getline(in,line)){
+        if(line.size() > 1){
+        	if(line_count == 0){
+        		std::vector<std::string> datas = split(line, ',');
+        		rows = std::atoi(datas[0].c_str());
+        		columns = std::atoi(datas[1].c_str());
+        		matrix.set_size(rows, columns);
+            }else{
+                std::vector<std::string> datas = split(line, ',');
+                int i = std::atoi(datas[0].c_str());
+                int j = std::atoi(datas[1].c_str());
+                double v_ij = std::atof(datas[2].c_str());
+                matrix(i,j) = v_ij;
+            }
+        }
+    	++line_count;
+    }
+    //std::cout << "	Sparse Arma Matrix Loaded" << std::endl;
+    return matrix;
+}
+
 Eigen::SparseMatrix<float> load_sparse_matrix(std::string& data_file_name){
+	/*buggy */
     std::string line;
     int line_count = 0;
     int files_count = 0;
@@ -539,6 +571,22 @@ void construct_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matr
 	}
 }
 
+void partial_svd(std::string& out_matrix_file, std::string& out_matrix_file_u, std::string& out_matrix_file_sigma, std::string& out_matrix_file_v){
+	arma::sp_fmat X = load_arma_sparce_matrix(out_matrix_file);
+	arma::fmat U; arma::fvec s; arma::fmat V;
+	int dims = 200;
+	bool svds_good = arma::svds(U, s, V, X, dims);
+	if(!svds_good)
+		std::cout << "		Partial decomp failed" << std::endl;
+	else{
+		std::cout << "		Partial decomp success" << std::endl;
+		arma::fmat m_s_s = arma::diagmat(s);
+		construct_matrix_arma_file_ijv(U, out_matrix_file_u);
+		construct_matrix_arma_file_ijv(m_s_s, out_matrix_file_sigma);
+		construct_matrix_arma_file_ijv(V, out_matrix_file_v);
+	}
+}
+
 void partial_svd(Eigen::SparseMatrix<float>& lsa_matrix, std::string& out_matrix_file_u, std::string& out_matrix_file_sigma, std::string& out_matrix_file_v){
 	arma::sp_fmat X = eigen_sparse_to_sparse_matrix_arma(lsa_matrix);
 	arma::fmat U; arma::fvec s; arma::fmat V;
@@ -586,9 +634,10 @@ void start_mine_people(std::string& person){
 					std::cout << "		SVD raw exists for: " << person << std::endl;
 				}else{
 					std::cout << " 	Trying partial svd " << std::endl;
-					Eigen::SparseMatrix<float> lsa_matrix = load_sparse_matrix(out_matrix_file);
+					//Eigen::SparseMatrix<float> lsa_matrix = load_sparse_matrix(out_matrix_file);
 					//try{
-						partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
+						//partial_svd(lsa_matrix, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
+						partial_svd(out_matrix_file, out_matrix_file_u, out_matrix_file_sigma, out_matrix_file_v);
 					/*}catch(std::logic_error& le){
 						std::cout << "person: " << person << ", error: " << le.what() << std::endl;
 					}*/
